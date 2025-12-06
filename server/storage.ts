@@ -282,14 +282,16 @@ export class DatabaseStorage implements IStorage {
     return offer || undefined;
   }
 
-  async getActiveOffers(filters?: { type?: string; currency?: string; country?: string }): Promise<Offer[]> {
+  async getActiveOffers(filters?: { type?: string; currency?: string; country?: string }): Promise<any[]> {
     let query = db
       .select({
         offer: offers,
         vendor: vendorProfiles,
+        user: users,
       })
       .from(offers)
       .innerJoin(vendorProfiles, eq(offers.vendorId, vendorProfiles.id))
+      .innerJoin(users, eq(vendorProfiles.userId, users.id))
       .where(and(eq(offers.isActive, true), eq(vendorProfiles.isApproved, true)))
       .$dynamic();
 
@@ -304,7 +306,18 @@ export class DatabaseStorage implements IStorage {
     }
 
     const results = await query.orderBy(desc(offers.isPriority), desc(offers.createdAt));
-    return results.map((r) => r.offer);
+    return results.map((r) => ({
+      ...r.offer,
+      vendorName: r.vendor.businessName || r.user.username,
+      vendorTrades: r.vendor.totalTrades,
+      vendorCompletionRate: r.vendor.totalTrades > 0 
+        ? ((r.vendor.completedTrades / r.vendor.totalTrades) * 100).toFixed(2)
+        : "100.00",
+      vendorRating: parseFloat(r.vendor.averageRating || "0") > 0 
+        ? (parseFloat(r.vendor.averageRating || "0") * 20).toFixed(2)
+        : "99.00",
+      responseTime: 15,
+    }));
   }
 
   async deactivateOffer(id: string): Promise<void> {
