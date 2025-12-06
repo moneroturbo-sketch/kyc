@@ -1,0 +1,119 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "apply": "Apply"
+  },
+  "nav": {
+    "marketplace": "Marketplace",
+    "orders": "Orders",
+    "wallet": "Wallet",
+    "vendor": "Vendor",
+    "admin": "Admin",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "logout": "Logout",
+    "signin": "Sign In"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "twoFactor": "Two-Factor Authentication",
+    "enterCode": "Enter verification code"
+  },
+  "marketplace": {
+    "title": "P2P Crypto Marketplace",
+    "subtitle": "Buy and sell cryptocurrency directly with other users. Secure escrow protection for every trade.",
+    "secureEscrow": "Secure Escrow",
+    "activeOffers": "Active Offers",
+    "verifiedVendors": "Verified Vendors",
+    "availableOffers": "Available Offers",
+    "noOffers": "No offers available",
+    "checkLater": "Check back later or adjust your filters",
+    "buy": "Buy",
+    "sell": "Sell",
+    "perUnit": "per unit",
+    "limit": "Limit",
+    "available": "Available",
+    "featured": "Featured"
+  },
+  "orders": {
+    "title": "My Orders",
+    "buying": "Buying",
+    "selling": "Selling",
+    "all": "All",
+    "active": "Active",
+    "completed": "Completed",
+    "noOrders": "No orders found",
+    "orderDetails": "Order Details",
+    "markPaid": "Mark as Paid",
+    "confirmRelease": "Confirm Release",
+    "openDispute": "Open Dispute",
+    "status": {
+      "pending": "Pending",
+      "funded": "Funded",
+      "paid": "Paid",
+      "released": "Released",
+      "disputed": "Disputed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "wallet": {
+    "title": "Wallet",
+    "balance": "Balance",
+    "available": "Available",
+    "inEscrow": "In Escrow",
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "transactions": "Transactions",
+    "noTransactions": "No transactions yet"
+  },
+  "vendor": {
+    "profile": "Vendor Profile",
+    "offers": "My Offers",
+    "analytics": "Analytics",
+    "createOffer": "Create Offer",
+    "editOffer": "Edit Offer",
+    "trades": "Trades",
+    "revenue": "Revenue",
+    "rating": "Rating",
+    "completionRate": "Completion Rate"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "security": "Security",
+    "twoFactor": "Two-Factor Authentication",
+    "kyc": "Identity Verification",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications"
+  },
+  "chat": {
+    "sendMessage": "Type a message...",
+    "noMessages": "No messages yet. Start the conversation!"
+  }
+}

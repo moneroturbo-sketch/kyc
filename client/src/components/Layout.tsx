@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/marketplace/ThemeToggle";
 import {
   Home,
   Wallet,
@@ -107,6 +108,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               {authenticated ? (
                 <>
                   {wallet && (

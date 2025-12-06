@@ -1,0 +1,119 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "back": "返回",
+    "next": "下一步",
+    "submit": "提交",
+    "search": "搜索",
+    "filter": "筛选",
+    "reset": "重置",
+    "apply": "应用"
+  },
+  "nav": {
+    "marketplace": "市场",
+    "orders": "订单",
+    "wallet": "钱包",
+    "vendor": "商家",
+    "admin": "管理",
+    "settings": "设置",
+    "notifications": "通知",
+    "logout": "退出",
+    "signin": "登录"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "username": "用户名",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "forgotPassword": "忘记密码？",
+    "noAccount": "还没有账户？",
+    "hasAccount": "已有账户？",
+    "twoFactor": "双重认证",
+    "enterCode": "输入验证码"
+  },
+  "marketplace": {
+    "title": "P2P加密货币市场",
+    "subtitle": "直接与其他用户买卖加密货币。每笔交易都有安全托管保护。",
+    "secureEscrow": "安全托管",
+    "activeOffers": "活跃报价",
+    "verifiedVendors": "认证商家",
+    "availableOffers": "可用报价",
+    "noOffers": "暂无报价",
+    "checkLater": "请稍后再查看或调整筛选条件",
+    "buy": "购买",
+    "sell": "出售",
+    "perUnit": "每单位",
+    "limit": "限额",
+    "available": "可用",
+    "featured": "推荐"
+  },
+  "orders": {
+    "title": "我的订单",
+    "buying": "购买",
+    "selling": "出售",
+    "all": "全部",
+    "active": "进行中",
+    "completed": "已完成",
+    "noOrders": "没有订单",
+    "orderDetails": "订单详情",
+    "markPaid": "标记已付款",
+    "confirmRelease": "确认放币",
+    "openDispute": "申诉",
+    "status": {
+      "pending": "待处理",
+      "funded": "已托管",
+      "paid": "已付款",
+      "released": "已放币",
+      "disputed": "申诉中",
+      "cancelled": "已取消"
+    }
+  },
+  "wallet": {
+    "title": "钱包",
+    "balance": "余额",
+    "available": "可用",
+    "inEscrow": "托管中",
+    "deposit": "充值",
+    "withdraw": "提现",
+    "transactions": "交易记录",
+    "noTransactions": "暂无交易记录"
+  },
+  "vendor": {
+    "profile": "商家资料",
+    "offers": "我的报价",
+    "analytics": "数据分析",
+    "createOffer": "创建报价",
+    "editOffer": "编辑报价",
+    "trades": "交易次数",
+    "revenue": "收入",
+    "rating": "评分",
+    "completionRate": "完成率"
+  },
+  "settings": {
+    "title": "设置",
+    "account": "账户",
+    "security": "安全",
+    "twoFactor": "双重认证",
+    "kyc": "身份验证",
+    "language": "语言",
+    "theme": "主题"
+  },
+  "notifications": {
+    "title": "通知",
+    "markAllRead": "全部标为已读",
+    "noNotifications": "暂无通知"
+  },
+  "chat": {
+    "sendMessage": "输入消息...",
+    "noMessages": "暂无消息，开始对话吧！"
+  }
+}
