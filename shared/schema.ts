@@ -55,6 +55,8 @@ export const kyc = pgTable("kyc", {
   idType: text("id_type"),
   idNumber: text("id_number"),
   idDocumentUrl: text("id_document_url"),
+  idFrontUrl: text("id_front_url"),
+  idBackUrl: text("id_back_url"),
   selfieUrl: text("selfie_url"),
   faceMatchScore: numeric("face_match_score", { precision: 5, scale: 2 }),
   adminNotes: text("admin_notes"),
@@ -62,6 +64,7 @@ export const kyc = pgTable("kyc", {
   submittedAt: timestamp("submitted_at").notNull().default(sql`now()`),
   reviewedAt: timestamp("reviewed_at"),
   reviewedBy: varchar("reviewed_by").references(() => users.id),
+  isStarVerified: boolean("is_star_verified").notNull().default(false),
 });
 
 // Vendor Profiles Table
