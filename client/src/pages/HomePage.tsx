@@ -279,13 +279,13 @@ export default function HomePage() {
                     </div>
 
                     <div className="mb-2">
-                      <span className="text-2xl font-bold text-foreground">{parseFloat(offer.pricePerUnit).toFixed(2)}</span>
-                      <span className="text-muted-foreground text-xs"> USDT/{selectedAccount !== "all" ? selectedAccount.replace(" UID", "").replace(" Address", "") : getAccountType(offer.paymentMethods)}</span>
+                      <span className="text-2xl font-bold text-foreground">${Math.floor(parseFloat(offer.pricePerUnit))}</span>
+                      <span className="text-muted-foreground text-xs"> /{selectedAccount !== "all" ? selectedAccount.replace(" UID", "").replace(" Address", "") : getAccountType(offer.paymentMethods)} account</span>
                     </div>
 
                     <div className="text-xs text-muted-foreground space-y-0.5">
-                      <p>Limit <span className="text-foreground">{parseFloat(offer.minLimit).toLocaleString()} - {parseFloat(offer.maxLimit).toLocaleString()} USDT</span></p>
-                      <p>Available <span className="text-foreground">{parseFloat(offer.availableAmount).toFixed(2)} accounts</span></p>
+                      <p>Limit <span className="text-foreground">${Math.floor(parseFloat(offer.minLimit)).toLocaleString()} - ${Math.floor(parseFloat(offer.maxLimit)).toLocaleString()}</span></p>
+                      <p>Available <span className="text-foreground">{Math.floor(parseFloat(offer.availableAmount))} accounts</span></p>
                     </div>
                   </div>
 

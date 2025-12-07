@@ -76,10 +76,11 @@ export default function TradePage() {
   });
 
   const handleAmountChange = (value: string) => {
-    setAmount(value);
-    if (offer && value) {
-      const fiat = parseFloat(value) * parseFloat(offer.pricePerUnit);
-      setFiatAmount(fiat.toFixed(2));
+    const intValue = Math.floor(parseFloat(value) || 0);
+    setAmount(intValue > 0 ? String(intValue) : "");
+    if (offer && intValue > 0) {
+      const fiat = intValue * parseFloat(offer.pricePerUnit);
+      setFiatAmount(String(Math.floor(fiat)));
     } else {
       setFiatAmount("");
     }
@@ -87,12 +88,6 @@ export default function TradePage() {
 
   const handleFiatChange = (value: string) => {
     setFiatAmount(value);
-    if (offer && value) {
-      const crypto = parseFloat(value) / parseFloat(offer.pricePerUnit);
-      setAmount(crypto.toFixed(8));
-    } else {
-      setAmount("");
-    }
   };
 
   if (isLoading) {
@@ -153,15 +148,15 @@ export default function TradePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-sm">Price per unit</p>
+                <p className="text-gray-400 text-sm">Price per account</p>
                 <p className="text-2xl font-bold text-white">
-                  ${parseFloat(offer.pricePerUnit).toFixed(2)}
+                  ${Math.floor(parseFloat(offer.pricePerUnit))}
                 </p>
               </div>
               <div className="p-4 bg-gray-800 rounded-lg">
                 <p className="text-gray-400 text-sm">Available</p>
                 <p className="text-2xl font-bold text-white">
-                  {parseFloat(offer.availableAmount).toFixed(4)} {offer.currency}
+                  {Math.floor(parseFloat(offer.availableAmount))} accounts
                 </p>
               </div>
             </div>
@@ -189,25 +184,28 @@ export default function TradePage() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-gray-300">You {offer.type === "buy" ? "sell" : "pay"} (USD)</Label>
+                <Label className="text-gray-300">Number of accounts</Label>
                 <Input
                   type="number"
-                  placeholder="0.00"
+                  placeholder="1"
+                  min="1"
+                  step="1"
+                  className="bg-gray-800 border-gray-700 text-white text-lg"
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  data-testid="input-account-amount"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-gray-300">Total price (USD)</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
                   className="bg-gray-800 border-gray-700 text-white text-lg"
                   value={fiatAmount}
                   onChange={(e) => handleFiatChange(e.target.value)}
                   data-testid="input-fiat-amount"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-gray-300">You {offer.type === "buy" ? "receive" : "get"} ({offer.currency})</Label>
-                <Input
-                  type="number"
-                  placeholder="0.00000000"
-                  className="bg-gray-800 border-gray-700 text-white text-lg"
-                  value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  data-testid="input-crypto-amount"
+                  readOnly
                 />
               </div>
             </div>

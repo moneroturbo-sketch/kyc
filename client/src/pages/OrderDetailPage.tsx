@@ -250,22 +250,22 @@ export default function OrderDetailPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-sm">Amount</p>
+                <p className="text-gray-400 text-sm">Accounts</p>
                 <p className="text-white font-bold">
-                  {parseFloat(order.amount).toFixed(4)} {order.currency}
+                  {Math.floor(parseFloat(order.amount))} account{Math.floor(parseFloat(order.amount)) !== 1 ? 's' : ''}
                 </p>
               </div>
               <div className="p-4 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-sm">Fiat Amount</p>
-                <p className="text-white font-bold">${parseFloat(order.fiatAmount).toFixed(2)}</p>
+                <p className="text-gray-400 text-sm">Total Price</p>
+                <p className="text-white font-bold">${Math.floor(parseFloat(order.fiatAmount))}</p>
               </div>
               <div className="p-4 bg-gray-800 rounded-lg">
                 <p className="text-gray-400 text-sm">Payment Method</p>
                 <p className="text-white font-bold">{order.paymentMethod}</p>
               </div>
               <div className="p-4 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-sm">Price/Unit</p>
-                <p className="text-white font-bold">${parseFloat(order.pricePerUnit).toFixed(2)}</p>
+                <p className="text-gray-400 text-sm">Price/Account</p>
+                <p className="text-white font-bold">${Math.floor(parseFloat(order.pricePerUnit))}</p>
               </div>
             </div>
 

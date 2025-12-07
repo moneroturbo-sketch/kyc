@@ -125,10 +125,10 @@ export default function OrdersPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <div className="text-right">
                   <p className="text-xl font-bold text-white">
-                    {parseFloat(order.amount).toFixed(4)} {order.currency}
+                    {Math.floor(parseFloat(order.amount))} account{Math.floor(parseFloat(order.amount)) !== 1 ? 's' : ''}
                   </p>
                   <p className="text-sm text-gray-400">
-                    ${parseFloat(order.fiatAmount).toFixed(2)} • {order.paymentMethod}
+                    ${Math.floor(parseFloat(order.fiatAmount))} • {order.paymentMethod}
                   </p>
                 </div>
                 <Link href={`/order/${order.id}`}>
