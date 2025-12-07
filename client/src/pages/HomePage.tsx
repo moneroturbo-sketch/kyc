@@ -175,7 +175,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between px-4 pb-3">
           <div className="flex items-center gap-3">
             <Select value={currentCurrency} onValueChange={setSelectedCurrency}>
-              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-currency">
+              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent [&>svg]:hidden" data-testid="filter-currency">
                 <div className="flex items-center gap-1 text-foreground font-medium">
                   <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                     <span className="text-primary-foreground text-xs font-bold">
@@ -183,7 +183,6 @@ export default function HomePage() {
                     </span>
                   </div>
                   <SelectValue />
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -213,7 +212,6 @@ export default function HomePage() {
               <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-payment">
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <SelectValue placeholder="Payment" />
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </div>
               </SelectTrigger>
               <SelectContent>
