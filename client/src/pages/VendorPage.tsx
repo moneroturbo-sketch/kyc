@@ -62,7 +62,7 @@ export default function VendorPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newOffer, setNewOffer] = useState({
     type: "sell",
-    currency: "USDT",
+    currency: "USD",
     pricePerUnit: "100",
     minLimit: "500",
     maxLimit: "50000",
