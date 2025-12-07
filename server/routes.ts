@@ -461,6 +461,8 @@ export async function registerRoutes(
         type: req.query.type as string | undefined,
         currency: req.query.currency as string | undefined,
         country: req.query.country as string | undefined,
+        paymentMethod: req.query.paymentMethod as string | undefined,
+        search: req.query.search as string | undefined,
       };
 
       const offers = await storage.getActiveOffers(filters);

@@ -24,6 +24,7 @@ import {
   Filter,
   ChevronLeft,
   Bell,
+  Search,
 } from "lucide-react";
 
 interface Offer {
@@ -60,27 +61,20 @@ interface Exchange {
 export default function HomePage() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const [selectedCurrency, setSelectedCurrency] = useState("");
-  const [selectedFiat, setSelectedFiat] = useState("USDT");
-  const [selectedAmount, setSelectedAmount] = useState("all");
   const [selectedPayment, setSelectedPayment] = useState("all");
-
-  const { data: exchanges } = useQuery<Exchange[]>({
-    queryKey: ["exchanges"],
-    queryFn: async () => {
-      const res = await fetch("/api/exchanges");
-      return res.json();
-    },
-  });
-
-  const defaultExchange = exchanges?.[0]?.symbol || "USDT";
-  const currentCurrency = selectedCurrency || defaultExchange;
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: offers, isLoading } = useQuery<Offer[]>({
-    queryKey: ["offers", activeTab === "buy" ? "sell" : "buy"],
+    queryKey: ["offers", activeTab === "buy" ? "sell" : "buy", selectedPayment, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("type", activeTab === "buy" ? "sell" : "buy");
+      if (selectedPayment && selectedPayment !== "all") {
+        params.append("paymentMethod", selectedPayment);
+      }
+      if (searchQuery) {
+        params.append("search", searchQuery);
+      }
       const res = await fetch(`/api/marketplace/offers?${params}`);
       return res.json();
     },
@@ -114,6 +108,17 @@ export default function HomePage() {
     return methodMap[method.toLowerCase()] || method;
   };
 
+  const getAccountType = (paymentMethods: string[]) => {
+    if (!paymentMethods || paymentMethods.length === 0) return "Account";
+    const method = paymentMethods[0];
+    if (method.includes("Binance")) return "Binance";
+    if (method.includes("OKX")) return "OKX";
+    if (method.includes("Bybit")) return "Bybit";
+    if (method.includes("MEXC")) return "MEXC";
+    if (method.includes("KuCoin")) return "KuCoin";
+    return method.replace(" UID", "").replace(" Address", "");
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-background border-b border-border">
@@ -127,10 +132,6 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-foreground font-medium gap-1" data-testid="select-fiat">
-              {selectedFiat}
-              <ChevronDown className="h-4 w-4" />
-            </Button>
             <ThemeToggle />
             <Link href="/notifications">
               <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
@@ -142,6 +143,20 @@ export default function HomePage() {
                 )}
               </Button>
             </Link>
+          </div>
+        </div>
+
+        <div className="px-4 pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search accounts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-muted rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              data-testid="search-accounts"
+            />
           </div>
         </div>
 
@@ -174,54 +189,20 @@ export default function HomePage() {
 
         <div className="flex items-center justify-between px-4 pb-3">
           <div className="flex items-center gap-3">
-            <Select value={currentCurrency} onValueChange={setSelectedCurrency}>
-              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent [&>svg]:hidden" data-testid="filter-currency">
-                <div className="flex items-center gap-1 text-foreground font-medium">
-                  <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                    <span className="text-primary-foreground text-xs font-bold">
-                      {exchanges?.find(e => e.symbol === currentCurrency)?.symbol?.charAt(0) || "₮"}
-                    </span>
-                  </div>
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {exchanges && exchanges.length > 0 ? (
-                  exchanges.map((exchange) => (
-                    <SelectItem key={exchange.id} value={exchange.symbol}>
-                      {exchange.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="USDT">USDT</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                placeholder="Amount"
-                value={selectedAmount === "all" ? "" : selectedAmount}
-                onChange={(e) => setSelectedAmount(e.target.value || "all")}
-                className="w-20 bg-transparent border-b border-muted-foreground/30 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-                data-testid="filter-amount"
-              />
-              <span className="text-xs text-muted-foreground">Accounts</span>
-            </div>
             <Select value={selectedPayment} onValueChange={setSelectedPayment}>
-              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-payment">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <SelectValue placeholder="Payment" />
+              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-account">
+                <div className="flex items-center gap-1 text-foreground font-medium">
+                  <SelectValue placeholder="All Accounts" />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Methods</SelectItem>
-                <SelectItem value="Binance UID">Binance UID</SelectItem>
-                <SelectItem value="OKX UID">OKX UID</SelectItem>
-                <SelectItem value="Bybit UID">Bybit UID</SelectItem>
-                <SelectItem value="MEXC UID">MEXC UID</SelectItem>
-                <SelectItem value="KuCoin UID">KuCoin UID</SelectItem>
-                <SelectItem value="Wallet Address">Wallet Address</SelectItem>
+                <SelectItem value="all">All Accounts</SelectItem>
+                <SelectItem value="Binance UID">Binance</SelectItem>
+                <SelectItem value="OKX UID">OKX</SelectItem>
+                <SelectItem value="Bybit UID">Bybit</SelectItem>
+                <SelectItem value="MEXC UID">MEXC</SelectItem>
+                <SelectItem value="KuCoin UID">KuCoin</SelectItem>
+                <SelectItem value="Wallet Address">Wallet</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -240,7 +221,7 @@ export default function HomePage() {
           </div>
         ) : offers && offers.length > 0 ? (
           <div className="divide-y divide-border">
-            {offers.map((offer, index) => (
+            {offers.map((offer) => (
               <div
                 key={offer.id}
                 className={`p-4 ${offer.isPriority ? "bg-amber-500/10 border-l-4 border-amber-400" : "bg-background"}`}
@@ -276,12 +257,12 @@ export default function HomePage() {
 
                     <div className="mb-2">
                       <span className="text-2xl font-bold text-foreground">{parseFloat(offer.pricePerUnit).toFixed(2)}</span>
-                      <span className="text-muted-foreground text-xs"> USDT/{selectedPayment !== "all" ? selectedPayment.replace(" UID", "") : offer.paymentMethods[0]?.replace(" UID", "") || "Account"}</span>
+                      <span className="text-muted-foreground text-xs"> USDT/{selectedPayment !== "all" ? selectedPayment.replace(" UID", "").replace(" Address", "") : getAccountType(offer.paymentMethods)}</span>
                     </div>
 
                     <div className="text-xs text-muted-foreground space-y-0.5">
                       <p>Limit <span className="text-foreground">{parseFloat(offer.minLimit).toLocaleString()} - {parseFloat(offer.maxLimit).toLocaleString()} USDT</span></p>
-                      <p>Available <span className="text-foreground">{parseFloat(offer.availableAmount).toFixed(2)}</span></p>
+                      <p>Available <span className="text-foreground">{parseFloat(offer.availableAmount).toFixed(2)} accounts</span></p>
                     </div>
                   </div>
 
@@ -313,8 +294,8 @@ export default function HomePage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
             <Filter className="h-16 w-16 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground text-lg">No offers available</p>
-            <p className="text-muted-foreground/70 text-sm">Check back later or adjust your filters</p>
+            <p className="text-muted-foreground text-lg">No accounts found</p>
+            <p className="text-muted-foreground/70 text-sm">Try a different search or filter</p>
           </div>
         )}
       </main>

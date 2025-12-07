@@ -294,7 +294,7 @@ export class DatabaseStorage implements IStorage {
     return offer || undefined;
   }
 
-  async getActiveOffers(filters?: { type?: string; currency?: string; country?: string }): Promise<any[]> {
+  async getActiveOffers(filters?: { type?: string; currency?: string; country?: string; paymentMethod?: string; search?: string }): Promise<any[]> {
     let query = db
       .select({
         offer: offers,
@@ -315,6 +315,19 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.country) {
       query = query.where(eq(vendorProfiles.country, filters.country));
+    }
+    if (filters?.paymentMethod && filters.paymentMethod !== "all") {
+      query = query.where(sql`${offers.paymentMethods} @> ARRAY[${filters.paymentMethod}]::text[]`);
+    }
+    if (filters?.search) {
+      const searchTerm = `%${filters.search.toLowerCase()}%`;
+      query = query.where(
+        or(
+          like(sql`LOWER(${users.username})`, searchTerm),
+          like(sql`LOWER(${vendorProfiles.businessName})`, searchTerm),
+          like(sql`LOWER(${offers.terms})`, searchTerm)
+        )
+      );
     }
 
     const results = await query.orderBy(desc(offers.isPriority), desc(offers.createdAt));
