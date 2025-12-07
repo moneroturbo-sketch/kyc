@@ -103,7 +103,7 @@ export default function HomePage() {
             </button>
             <div className="flex items-center gap-6">
               <span className="text-muted-foreground font-medium">Express</span>
-              <span className="text-foreground font-semibold border-b-2 border-foreground pb-1">P2P</span>
+              <span className="text-foreground font-semibold border-b-2 border-foreground pb-1">KYC</span>
               <span className="text-muted-foreground font-medium">Block Trade</span>
             </div>
           </div>

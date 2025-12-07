@@ -85,7 +85,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="p-2 bg-purple-600 rounded-lg">
                   <Shield className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-white text-lg hidden sm:block">P2P Market</span>
+                <span className="font-bold text-white text-lg hidden sm:block">KYC Marketplace</span>
               </Link>
 
               {authenticated && (

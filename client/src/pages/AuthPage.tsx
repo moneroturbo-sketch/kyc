@@ -57,7 +57,7 @@ export default function AuthPage() {
     onSuccess: (data) => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      toast({ title: "Account Created!", description: "Welcome to P2P Marketplace" });
+      toast({ title: "Account Created!", description: "Welcome to KYC Marketplace" });
       setLocation("/");
     },
     onError: (error: Error) => {
@@ -74,7 +74,7 @@ export default function AuthPage() {
               <Shield className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white">P2P Marketplace</h1>
+          <h1 className="text-3xl font-bold text-white">KYC Marketplace</h1>
           <p className="text-gray-400 mt-2">Secure peer-to-peer trading platform</p>
         </div>
 
