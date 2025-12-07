@@ -586,19 +586,26 @@ export async function registerRoutes(
     }
   });
 
-  // Confirm order and release - ADMIN ONLY
-  app.post("/api/orders/:id/confirm", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  // Confirm order and release - Vendor or Admin
+  app.post("/api/orders/:id/confirm", requireAuth, async (req: AuthRequest, res) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
 
+      // Check if user is the vendor for this order or an admin
+      const vendorProfile = await storage.getVendorProfile(order.vendorId);
+      const isVendor = vendorProfile && vendorProfile.userId === req.user!.userId;
+      const isAdmin = req.user!.role === "admin";
+      
+      if (!isVendor && !isAdmin) {
+        return res.status(403).json({ message: "Only the vendor or admin can confirm this order" });
+      }
+
       if (order.status !== "paid") {
         return res.status(400).json({ message: "Order must be paid first" });
       }
-
-      const vendorProfile = await storage.getVendorProfile(order.vendorId);
 
       const updated = await storage.updateOrder(req.params.id, {
         status: "completed",
@@ -618,10 +625,11 @@ export async function registerRoutes(
         });
       }
 
+      const confirmedBy = isAdmin ? "admin" : "vendor";
       await storage.createChatMessage({
         orderId: req.params.id,
         senderId: req.user!.userId,
-        message: "Order completed and released by admin",
+        message: `Order completed and released by ${confirmedBy}`,
       });
 
       res.json(updated);
