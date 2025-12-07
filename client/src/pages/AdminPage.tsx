@@ -198,7 +198,10 @@ export default function AdminPage() {
   });
 
   const canApproveKyc = (kyc: KycApplication) => {
-    return kyc.idFrontUrl && kyc.idBackUrl && kyc.selfieUrl;
+    // Accept either: (idFrontUrl + idBackUrl + selfieUrl) OR (idDocumentUrl + selfieUrl)
+    const hasAllThree = kyc.idFrontUrl && kyc.idBackUrl && kyc.selfieUrl;
+    const hasDocAndSelfie = kyc.idDocumentUrl && kyc.selfieUrl;
+    return hasAllThree || hasDocAndSelfie;
   };
 
   const handleApprove = (kyc: KycApplication) => {
@@ -206,7 +209,7 @@ export default function AdminPage() {
       toast({ 
         variant: "destructive", 
         title: "Cannot Approve", 
-        description: "User must upload ID front, ID back, and selfie before approval" 
+        description: "User must upload required documents (ID document + selfie) before approval" 
       });
       return;
     }
@@ -413,7 +416,7 @@ export default function AdminPage() {
                       <div className="p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg mb-4">
                         <p className="text-yellow-400 text-sm flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4" />
-                          Cannot approve: User must upload all required documents (ID front, ID back, and selfie)
+                          Cannot approve: User must upload required documents (ID document + selfie)
                         </p>
                       </div>
                     )}
