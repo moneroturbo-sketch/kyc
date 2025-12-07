@@ -278,7 +278,7 @@ export default function HomePage() {
 
                     <div className="mb-2">
                       <span className="text-2xl font-bold text-foreground">{parseFloat(offer.pricePerUnit).toFixed(2)}</span>
-                      <span className="text-muted-foreground text-xs"> USDT/{selectedPayment !== "all" ? selectedPayment.replace(" UID", "").replace(" Address", "") : getAccountType(offer.paymentMethods)}</span>
+                      <span className="text-muted-foreground text-xs"> USDT/{selectedAccount !== "all" ? selectedAccount.replace(" UID", "").replace(" Address", "") : getAccountType(offer.paymentMethods)}</span>
                     </div>
 
                     <div className="text-xs text-muted-foreground space-y-0.5">
