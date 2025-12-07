@@ -129,7 +129,7 @@ async function seed() {
       console.log(`Created user ${i + 1}/20: ${username}`);
     }
     
-    console.log("\n=== Creating 7 Buying Ads for Each User ===");
+    console.log("\n=== Creating 7 Buying Ads and 7 Selling Ads for Each User ===");
     for (let i = 0; i < 20; i++) {
       const vendorId = vendorIds[i];
       const username = usernames[i];
@@ -153,7 +153,27 @@ async function seed() {
           isPriority: j < 2,
         });
       }
-      console.log(`Created 7 buying ads for user: ${username}`);
+      
+      // Create 7 SELL offers (ads for selling accounts)
+      for (let j = 0; j < 7; j++) {
+        const exchangeName = exchangeNames[j % exchangeNames.length];
+        const basePrice = 105 + Math.random() * 30;
+        
+        await db.insert(offers).values({
+          vendorId,
+          type: "sell",
+          currency: "USDT",
+          pricePerUnit: basePrice.toFixed(2),
+          minLimit: (500 + Math.random() * 1500).toFixed(2),
+          maxLimit: (30000 + Math.random() * 100000).toFixed(2),
+          availableAmount: (200 + Math.random() * 800).toFixed(2),
+          paymentMethods: [paymentMethods[j % paymentMethods.length], paymentMethods[(j + 2) % paymentMethods.length]],
+          terms: `Selling verified ${exchangeName} account with trading history. Fast delivery, secure transaction guaranteed.`,
+          isActive: true,
+          isPriority: j < 2,
+        });
+      }
+      console.log(`Created 7 buying + 7 selling ads for user: ${username}`);
     }
     
     console.log("\n=== Seed Summary ===");
@@ -164,9 +184,9 @@ async function seed() {
     console.log(`  Role: admin`);
     console.log(`\n20 Verified Users:`);
     usernames.forEach((name, i) => {
-      console.log(`  ${i + 1}. ${name} - 7 buying ads`);
+      console.log(`  ${i + 1}. ${name} - 7 buying ads + 7 selling ads`);
     });
-    console.log(`\nTotal Offers: 140 (7 buying ads per user x 20 users)`);
+    console.log(`\nTotal Offers: 280 (14 ads per user x 20 users)`);
     console.log(`\nAll user accounts have password: Password123!`);
     console.log("\nSeed completed successfully!");
     
