@@ -27,7 +27,7 @@ export async function notifyOrderCreated(orderId: string, buyerId: string, vendo
       "order",
       "New Order",
       "You have received a new order",
-      `/orders/${orderId}`
+      `/order/${orderId}`
     );
   }
 }
@@ -40,7 +40,7 @@ export async function notifyOrderPaid(orderId: string, vendorId: string): Promis
       "payment",
       "Payment Marked",
       "Buyer has marked the payment as sent",
-      `/orders/${orderId}`
+      `/order/${orderId}`
     );
   }
 }
@@ -51,7 +51,7 @@ export async function notifyOrderCompleted(orderId: string, buyerId: string): Pr
     "order",
     "Order Completed",
     "Your order has been completed successfully",
-    `/orders/${orderId}`
+    `/order/${orderId}`
   );
 }
 
@@ -61,6 +61,6 @@ export async function notifyDisputeOpened(orderId: string, userId: string): Prom
     "dispute",
     "Dispute Opened",
     "A dispute has been opened for your order",
-    `/orders/${orderId}`
+    `/order/${orderId}`
   );
 }
