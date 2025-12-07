@@ -300,7 +300,7 @@ export default function HomePage() {
                       <span>{offer.responseTime || 15} min</span>
                     </div>
                     <Button
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-2 rounded-md font-medium mt-2"
+                      className={`${activeTab === "buy" ? "bg-primary hover:bg-primary/90" : "bg-red-500 hover:bg-red-600"} text-primary-foreground px-8 py-2 rounded-md font-medium mt-2`}
                       onClick={() => handleTradeClick(offer)}
                       data-testid={`button-trade-${offer.id}`}
                     >
