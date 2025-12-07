@@ -116,7 +116,7 @@ export default function OrderDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-      toast({ title: "Order confirmed", description: "Funds have been released" });
+      toast({ title: "Order confirmed", description: "Account details delivered to buyer" });
     },
     onError: () => {
       toast({ variant: "destructive", title: "Failed to confirm order" });
@@ -300,7 +300,7 @@ export default function OrderDetailPage() {
                   data-testid="button-confirm-order"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm Receipt & Release
+                  Confirm Payment & Deliver Account
                 </Button>
               )}
 

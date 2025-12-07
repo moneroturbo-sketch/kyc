@@ -209,7 +209,7 @@ export default function VendorPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Currency</Label>
+                      <Label>Payment Currency</Label>
                       <Select
                         value={newOffer.currency}
                         onValueChange={(v) => setNewOffer({ ...newOffer, currency: v })}
@@ -218,21 +218,22 @@ export default function VendorPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="USD">USD</SelectItem>
                           <SelectItem value="USDT">USDT</SelectItem>
-                          <SelectItem value="BTC">BTC</SelectItem>
-                          <SelectItem value="ETH">ETH</SelectItem>
+                          <SelectItem value="KES">KES</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Price per Unit (USD)</Label>
+                    <Label>Price per Account (USD)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={newOffer.pricePerUnit}
                       onChange={(e) => setNewOffer({ ...newOffer, pricePerUnit: e.target.value })}
                       className="bg-gray-800 border-gray-700"
+                      placeholder="e.g. 100"
                       data-testid="input-price"
                     />
                   </div>
@@ -259,13 +260,14 @@ export default function VendorPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Available Amount</Label>
+                    <Label>Available Accounts</Label>
                     <Input
                       type="number"
-                      step="0.0001"
+                      step="1"
                       value={newOffer.availableAmount}
                       onChange={(e) => setNewOffer({ ...newOffer, availableAmount: e.target.value })}
                       className="bg-gray-800 border-gray-700"
+                      placeholder="Number of accounts for sale"
                       data-testid="input-available"
                     />
                   </div>
@@ -295,7 +297,7 @@ export default function VendorPage() {
                         <Shield className="h-5 w-5 text-green-400" />
                         <Label className="text-green-400 font-medium">Account Details (KYC Verified)</Label>
                       </div>
-                      <p className="text-gray-400 text-sm">These details will only be revealed to the buyer after the transaction is completed by admin.</p>
+                      <p className="text-gray-400 text-sm">These details will only be revealed to the buyer after you confirm payment received.</p>
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
