@@ -392,21 +392,33 @@ export async function registerRoutes(
     }
   });
 
-  // Create offer
-  app.post("/api/vendor/offers", requireAuth, requireRole("vendor", "admin"), async (req: AuthRequest, res) => {
+  // Create offer - allows any KYC verified user to post ads
+  app.post("/api/vendor/offers", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const profile = await storage.getVendorProfileByUserId(req.user!.userId);
-      if (!profile) {
-        return res.status(404).json({ message: "Vendor profile not found" });
-      }
-
-      if (!profile.isApproved) {
-        return res.status(403).json({ message: "Vendor profile not approved" });
-      }
-
+      // Check KYC status first
       const kyc = await storage.getKycByUserId(req.user!.userId);
       if (!kyc || kyc.status !== "approved") {
         return res.status(403).json({ message: "KYC verification required before posting ads. Please complete your KYC verification." });
+      }
+
+      // Auto-create vendor profile if user doesn't have one
+      let profile = await storage.getVendorProfileByUserId(req.user!.userId);
+      if (!profile) {
+        const user = await storage.getUser(req.user!.userId);
+        profile = await storage.createVendorProfile({
+          userId: req.user!.userId,
+          country: "Unknown",
+          bio: `Verified trader - ${user?.username}`,
+        });
+        // Auto-approve for KYC verified users
+        await storage.updateVendorProfile(profile.id, { isApproved: true });
+        profile.isApproved = true;
+        // Update user role to vendor
+        await storage.updateUser(req.user!.userId, { role: "vendor" });
+      }
+
+      if (!profile.isApproved) {
+        return res.status(403).json({ message: "Vendor profile not approved. Please wait for admin approval." });
       }
 
       const validatedData = insertOfferSchema.parse({
@@ -422,12 +434,12 @@ export async function registerRoutes(
     }
   });
 
-  // Get vendor's offers
-  app.get("/api/vendor/offers", requireAuth, requireRole("vendor", "admin"), async (req: AuthRequest, res) => {
+  // Get vendor's offers - allows any authenticated user (for KYC verified users)
+  app.get("/api/vendor/offers", requireAuth, async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getVendorProfileByUserId(req.user!.userId);
       if (!profile) {
-        return res.status(404).json({ message: "Vendor profile not found" });
+        return res.json([]);
       }
 
       const offers = await storage.getOffersByVendor(profile.id);

@@ -9,36 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchWithAuth, isAuthenticated } from "@/lib/auth";
-import { RatingStars, PaymentMethodChips } from "@/components/marketplace/VendorCard";
+import { PaymentMethodChips } from "@/components/marketplace/VendorCard";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  Star,
   Package,
-  Percent,
   Edit,
   Trash2,
   BarChart3,
   Shield,
 } from "lucide-react";
-
-interface VendorProfile {
-  id: string;
-  userId: string;
-  tier: string;
-  rating: string;
-  totalTrades: number;
-  successfulTrades: number;
-  totalVolume: string;
-  isApproved: boolean;
-}
 
 interface Offer {
   id: string;
@@ -67,7 +52,8 @@ interface KycStatus {
   tier: string;
 }
 
-const paymentOptions = ["Bank Transfer", "PayPal", "Venmo", "Cash App", "Zelle", "Wise", "Revolut"];
+const exchangeOptions = ["OKX", "Binance", "Bybit", "KuCoin", "Huobi", "Gate.io", "MEXC", "Bitget", "Coinbase", "Kraken"];
+const paymentOptions = ["Binance UID", "OKX UID", "MEXC UID", "Bybit UID", "Bitget UID", "Wallet Address", "Bank Transfer", "PayPal"];
 
 export default function VendorPage() {
   const [, setLocation] = useLocation();
@@ -77,11 +63,11 @@ export default function VendorPage() {
   const [newOffer, setNewOffer] = useState({
     type: "sell",
     currency: "USDT",
-    pricePerUnit: "",
-    minLimit: "",
-    maxLimit: "",
-    availableAmount: "",
-    paymentMethods: [] as string[],
+    pricePerUnit: "100",
+    minLimit: "500",
+    maxLimit: "50000",
+    availableAmount: "100",
+    paymentMethods: ["Binance UID"] as string[],
     terms: "",
     accountDetails: {
       exchangeName: "",
@@ -98,7 +84,7 @@ export default function VendorPage() {
     return null;
   }
 
-  const { data: kycStatus } = useQuery<KycStatus>({
+  const { data: kycStatus, isLoading: kycLoading } = useQuery<KycStatus>({
     queryKey: ["kycStatus"],
     queryFn: async () => {
       const res = await fetchWithAuth("/api/kyc/status");
@@ -108,21 +94,12 @@ export default function VendorPage() {
 
   const isKycVerified = kycStatus?.status === "approved";
 
-  const { data: vendor, isLoading: vendorLoading } = useQuery<VendorProfile>({
-    queryKey: ["vendorProfile"],
-    queryFn: async () => {
-      const res = await fetchWithAuth("/api/vendor/profile");
-      return res.json();
-    },
-  });
-
   const { data: offers, isLoading: offersLoading } = useQuery<Offer[]>({
     queryKey: ["vendorOffers"],
     queryFn: async () => {
       const res = await fetchWithAuth("/api/vendor/offers");
       return res.json();
     },
-    enabled: !!vendor,
   });
 
   const createOfferMutation = useMutation({
@@ -197,30 +174,17 @@ export default function VendorPage() {
     },
   });
 
-  const completionRate = vendor
-    ? vendor.totalTrades > 0
-      ? Math.round((vendor.successfulTrades / vendor.totalTrades) * 100)
-      : 100
-    : 0;
-
-  const tierColors: Record<string, string> = {
-    free: "bg-gray-600",
-    basic: "bg-blue-600",
-    pro: "bg-purple-600",
-    featured: "bg-yellow-600",
-  };
-
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 pb-20">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Vendor Dashboard</h1>
-          {vendor?.isApproved && (
+          <h1 className="text-2xl font-bold text-foreground">Post Ad</h1>
+          {isKycVerified && (
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-purple-600 hover:bg-purple-700" data-testid="button-create-offer">
+                <Button className="bg-primary hover:bg-primary/90" data-testid="button-create-offer">
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Offer
+                  New Ad
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-gray-900 border-gray-800 max-w-lg">
@@ -445,193 +409,130 @@ export default function VendorPage() {
           )}
         </div>
 
-        {vendorLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24 bg-gray-800" />
-            ))}
+        {kycLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-24 bg-muted" />
+            <Skeleton className="h-24 bg-muted" />
           </div>
-        ) : vendor ? (
-          <>
-            {!vendor.isApproved && (
-              <Card className="bg-yellow-900/30 border-yellow-700">
-                <CardContent className="p-4">
-                  <p className="text-yellow-400">
-                    Your vendor account is pending approval. You'll be able to create offers once approved.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="bg-gray-900/50 border-gray-800">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-green-900 rounded-xl">
-                      <Package className="h-6 w-6 text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Total Trades</p>
-                      <p className="text-white text-2xl font-bold" data-testid="text-total-trades">
-                        {vendor.totalTrades}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-900/50 border-gray-800">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-900 rounded-xl">
-                      <DollarSign className="h-6 w-6 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Total Volume</p>
-                      <p className="text-white text-2xl font-bold" data-testid="text-total-volume">
-                        ${parseFloat(vendor.totalVolume || "0").toFixed(0)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-900/50 border-gray-800">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-yellow-900 rounded-xl">
-                      <Star className="h-6 w-6 text-yellow-400" />
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Rating</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-white text-2xl font-bold" data-testid="text-rating">
-                          {parseFloat(vendor.rating || "0").toFixed(1)}
-                        </p>
-                        <RatingStars rating={Math.round(parseFloat(vendor.rating || "0"))} size="sm" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-900/50 border-gray-800">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-purple-900 rounded-xl">
-                      <Percent className="h-6 w-6 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Completion Rate</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-white text-2xl font-bold" data-testid="text-completion-rate">
-                          {completionRate}%
-                        </p>
-                        <Badge className={tierColors[vendor.tier] || "bg-gray-600"}>
-                          {vendor.tier}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="bg-gray-900/50 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  My Offers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {offersLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 bg-gray-800" />
-                    ))}
-                  </div>
-                ) : offers && offers.length > 0 ? (
-                  <div className="space-y-4">
-                    {offers.map((offer) => (
-                      <div
-                        key={offer.id}
-                        className="p-4 rounded-xl bg-gray-800/50 border border-gray-700"
-                        data-testid={`vendor-offer-${offer.id}`}
-                      >
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-lg ${offer.type === "buy" ? "bg-green-900" : "bg-red-900"}`}>
-                              {offer.type === "buy" ? (
-                                <TrendingUp className="h-5 w-5 text-green-400" />
-                              ) : (
-                                <TrendingDown className="h-5 w-5 text-red-400" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-white font-medium">
-                                  {offer.type.toUpperCase()} {offer.currency}
-                                </span>
-                                <Badge variant={offer.isActive ? "default" : "secondary"}>
-                                  {offer.isActive ? "Active" : "Inactive"}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-gray-400">
-                                ${parseFloat(offer.pricePerUnit).toFixed(2)} per unit
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right text-sm">
-                              <p className="text-gray-400">
-                                Limit: ${parseFloat(offer.minLimit).toFixed(0)} - ${parseFloat(offer.maxLimit).toFixed(0)}
-                              </p>
-                              <p className="text-gray-400">
-                                Available: {parseFloat(offer.availableAmount).toFixed(4)} {offer.currency}
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-gray-400 hover:text-white"
-                                data-testid={`button-edit-${offer.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-400 hover:text-red-300"
-                                onClick={() => deleteOfferMutation.mutate(offer.id)}
-                                data-testid={`button-delete-${offer.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <PaymentMethodChips methods={offer.paymentMethods} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Package className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400 text-lg">No offers yet</p>
-                    <p className="text-gray-500">Create your first offer to start trading</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
-        ) : (
-          <Card className="bg-gray-900/50 border-gray-800">
+        ) : !isKycVerified ? (
+          <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
-              <p className="text-gray-400 text-lg mb-4">You don't have a vendor account yet</p>
-              <Button className="bg-purple-600 hover:bg-purple-700" data-testid="button-become-vendor">
-                Apply to Become a Vendor
+              <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-foreground mb-2">KYC Verification Required</h2>
+              <p className="text-muted-foreground mb-6">
+                You need to complete KYC verification before you can post ads. This helps us ensure a safe trading environment.
+              </p>
+              <Button 
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => setLocation("/settings")}
+                data-testid="button-verify-kyc"
+              >
+                Complete KYC Verification
               </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                My Ads
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {offersLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-20 bg-muted" />
+                  ))}
+                </div>
+              ) : offers && offers.length > 0 ? (
+                <div className="space-y-4">
+                  {offers.map((offer) => (
+                    <div
+                      key={offer.id}
+                      className="p-4 rounded-xl bg-muted/50 border border-border"
+                      data-testid={`vendor-offer-${offer.id}`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2 rounded-lg ${offer.type === "buy" ? "bg-green-900/50" : "bg-red-900/50"}`}>
+                            {offer.type === "buy" ? (
+                              <TrendingUp className="h-5 w-5 text-green-400" />
+                            ) : (
+                              <TrendingDown className="h-5 w-5 text-red-400" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-foreground font-medium">
+                                {offer.type.toUpperCase()} {offer.currency}
+                              </span>
+                              <Badge variant={offer.isActive ? "default" : "secondary"}>
+                                {offer.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              ${parseFloat(offer.pricePerUnit).toFixed(2)} per unit
+                            </p>
+                            {offer.accountDetails?.exchangeName && (
+                              <p className="text-xs text-primary">
+                                {offer.accountDetails.exchangeName} Account
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right text-sm">
+                            <p className="text-muted-foreground">
+                              Limit: ${parseFloat(offer.minLimit).toFixed(0)} - ${parseFloat(offer.maxLimit).toFixed(0)}
+                            </p>
+                            <p className="text-muted-foreground">
+                              Available: {parseFloat(offer.availableAmount).toFixed(4)} {offer.currency}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-foreground"
+                              data-testid={`button-edit-${offer.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive/80"
+                              onClick={() => deleteOfferMutation.mutate(offer.id)}
+                              data-testid={`button-delete-${offer.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <PaymentMethodChips methods={offer.paymentMethods} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-foreground text-lg">No ads yet</p>
+                  <p className="text-muted-foreground mb-4">Create your first ad to start trading</p>
+                  <Button 
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => setCreateDialogOpen(true)}
+                    data-testid="button-create-first-ad"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Post Your First Ad
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
