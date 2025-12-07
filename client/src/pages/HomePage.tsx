@@ -61,16 +61,20 @@ interface Exchange {
 export default function HomePage() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const [selectedPayment, setSelectedPayment] = useState("all");
+  const [selectedAccount, setSelectedAccount] = useState("all");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: offers, isLoading } = useQuery<Offer[]>({
-    queryKey: ["offers", activeTab === "buy" ? "sell" : "buy", selectedPayment, searchQuery],
+    queryKey: ["offers", activeTab === "buy" ? "sell" : "buy", selectedAccount, selectedPaymentMethod, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("type", activeTab === "buy" ? "sell" : "buy");
-      if (selectedPayment && selectedPayment !== "all") {
-        params.append("paymentMethod", selectedPayment);
+      if (selectedAccount && selectedAccount !== "all") {
+        params.append("accountType", selectedAccount);
+      }
+      if (selectedPaymentMethod && selectedPaymentMethod !== "all") {
+        params.append("paymentMethod", selectedPaymentMethod);
       }
       if (searchQuery) {
         params.append("search", searchQuery);
@@ -188,11 +192,12 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center justify-between px-4 pb-3">
-          <div className="flex items-center gap-3">
-            <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+          <div className="flex items-center gap-4">
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-account">
-                <div className="flex items-center gap-1 text-foreground font-medium">
+                <div className="flex items-center gap-1 text-foreground font-medium text-sm">
                   <SelectValue placeholder="All Accounts" />
+                  <ChevronDown className="h-4 w-4" />
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -203,6 +208,22 @@ export default function HomePage() {
                 <SelectItem value="MEXC UID">MEXC</SelectItem>
                 <SelectItem value="KuCoin UID">KuCoin</SelectItem>
                 <SelectItem value="Wallet Address">Wallet</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-payment">
+                <div className="flex items-center gap-1 text-foreground font-medium text-sm">
+                  <SelectValue placeholder="All Payments" />
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payments</SelectItem>
+                <SelectItem value="mpesa">M-PESA Kenya</SelectItem>
+                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                <SelectItem value="equity_bank">Equity Bank</SelectItem>
+                <SelectItem value="paybill">M-pesa Paybill</SelectItem>
               </SelectContent>
             </Select>
           </div>
