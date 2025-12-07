@@ -242,6 +242,20 @@ export const themeSettings = pgTable("theme_settings", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Exchanges Table (Admin-managed crypto exchanges)
+export const exchanges = pgTable("exchanges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  symbol: text("symbol").notNull().unique(),
+  description: text("description"),
+  iconUrl: text("icon_url"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   kyc: one(kyc, {
@@ -548,3 +562,12 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 
 export type MaintenanceSettings = typeof maintenanceSettings.$inferSelect;
 export type ThemeSettings = typeof themeSettings.$inferSelect;
+
+export const insertExchangeSchema = createInsertSchema(exchanges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExchange = z.infer<typeof insertExchangeSchema>;
+export type Exchange = typeof exchanges.$inferSelect;

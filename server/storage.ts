@@ -16,6 +16,7 @@ import {
   auditLogs,
   maintenanceSettings,
   themeSettings,
+  exchanges,
   type User,
   type InsertUser,
   type Kyc,
@@ -44,6 +45,8 @@ import {
   type InsertAuditLog,
   type MaintenanceSettings,
   type ThemeSettings,
+  type Exchange,
+  type InsertExchange,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -141,6 +144,15 @@ export interface IStorage {
   // Theme Settings
   getThemeSettings(): Promise<ThemeSettings | undefined>;
   updateThemeSettings(updates: Partial<ThemeSettings>): Promise<ThemeSettings>;
+
+  // Exchanges
+  getExchange(id: string): Promise<Exchange | undefined>;
+  getExchangeBySymbol(symbol: string): Promise<Exchange | undefined>;
+  getAllExchanges(): Promise<Exchange[]>;
+  getActiveExchanges(): Promise<Exchange[]>;
+  createExchange(exchange: InsertExchange): Promise<Exchange>;
+  updateExchange(id: string, updates: Partial<Exchange>): Promise<Exchange | undefined>;
+  deleteExchange(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -592,6 +604,43 @@ export class DatabaseStorage implements IStorage {
     }
     const [newSettings] = await db.insert(themeSettings).values(updates as any).returning();
     return newSettings;
+  }
+
+  // Exchanges
+  async getExchange(id: string): Promise<Exchange | undefined> {
+    const [exchange] = await db.select().from(exchanges).where(eq(exchanges.id, id));
+    return exchange || undefined;
+  }
+
+  async getExchangeBySymbol(symbol: string): Promise<Exchange | undefined> {
+    const [exchange] = await db.select().from(exchanges).where(eq(exchanges.symbol, symbol));
+    return exchange || undefined;
+  }
+
+  async getAllExchanges(): Promise<Exchange[]> {
+    return await db.select().from(exchanges).orderBy(exchanges.sortOrder);
+  }
+
+  async getActiveExchanges(): Promise<Exchange[]> {
+    return await db.select().from(exchanges).where(eq(exchanges.isActive, true)).orderBy(exchanges.sortOrder);
+  }
+
+  async createExchange(exchange: InsertExchange): Promise<Exchange> {
+    const [newExchange] = await db.insert(exchanges).values(exchange).returning();
+    return newExchange;
+  }
+
+  async updateExchange(id: string, updates: Partial<Exchange>): Promise<Exchange | undefined> {
+    const [updated] = await db
+      .update(exchanges)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(exchanges.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteExchange(id: string): Promise<void> {
+    await db.delete(exchanges).where(eq(exchanges.id, id));
   }
 }
 
