@@ -25,6 +25,7 @@ import {
   Edit,
   Trash2,
   BarChart3,
+  Shield,
 } from "lucide-react";
 
 interface VendorProfile {
@@ -49,8 +50,20 @@ interface Offer {
   availableAmount: string;
   paymentMethods: string[];
   terms: string | null;
+  accountDetails: {
+    exchangeName: string;
+    accountName: string;
+    email: string;
+    password: string;
+    emailPassword: string;
+  } | null;
   isActive: boolean;
   isPriority: boolean;
+}
+
+interface KycStatus {
+  status: string;
+  tier: string;
 }
 
 const paymentOptions = ["Bank Transfer", "PayPal", "Venmo", "Cash App", "Zelle", "Wise", "Revolut"];
@@ -68,12 +81,30 @@ export default function VendorPage() {
     availableAmount: "",
     paymentMethods: [] as string[],
     terms: "",
+    accountDetails: {
+      exchangeName: "",
+      accountName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      emailPassword: "",
+    },
   });
 
   if (!isAuthenticated()) {
     setLocation("/auth");
     return null;
   }
+
+  const { data: kycStatus } = useQuery<KycStatus>({
+    queryKey: ["kycStatus"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/kyc/status");
+      return res.json();
+    },
+  });
+
+  const isKycVerified = kycStatus?.status === "approved";
 
   const { data: vendor, isLoading: vendorLoading } = useQuery<VendorProfile>({
     queryKey: ["vendorProfile"],
@@ -94,10 +125,29 @@ export default function VendorPage() {
 
   const createOfferMutation = useMutation({
     mutationFn: async (offer: typeof newOffer) => {
+      const payload: any = {
+        type: offer.type,
+        currency: offer.currency,
+        pricePerUnit: offer.pricePerUnit,
+        minLimit: offer.minLimit,
+        maxLimit: offer.maxLimit,
+        availableAmount: offer.availableAmount,
+        paymentMethods: offer.paymentMethods,
+        terms: offer.terms,
+      };
+      if (isKycVerified && offer.accountDetails.email) {
+        payload.accountDetails = {
+          exchangeName: offer.accountDetails.exchangeName,
+          accountName: offer.accountDetails.accountName,
+          email: offer.accountDetails.email,
+          password: offer.accountDetails.password,
+          emailPassword: offer.accountDetails.emailPassword,
+        };
+      }
       const res = await fetchWithAuth("/api/vendor/offers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(offer),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to create offer");
       return res.json();
@@ -114,6 +164,14 @@ export default function VendorPage() {
         availableAmount: "",
         paymentMethods: [],
         terms: "",
+        accountDetails: {
+          exchangeName: "",
+          accountName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          emailPassword: "",
+        },
       });
     },
   });
@@ -257,6 +315,113 @@ export default function VendorPage() {
                       data-testid="input-terms"
                     />
                   </div>
+
+                  {isKycVerified && (
+                    <div className="space-y-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-green-400" />
+                        <Label className="text-green-400 font-medium">Account Details (KYC Verified)</Label>
+                      </div>
+                      <p className="text-gray-400 text-sm">These details will only be revealed to the buyer after the transaction is completed by admin.</p>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Exchange Name</Label>
+                          <Input
+                            value={newOffer.accountDetails.exchangeName}
+                            onChange={(e) => setNewOffer({
+                              ...newOffer,
+                              accountDetails: { ...newOffer.accountDetails, exchangeName: e.target.value }
+                            })}
+                            className="bg-gray-800 border-gray-700"
+                            placeholder="e.g. Binance"
+                            data-testid="input-exchange-name"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Account Name</Label>
+                          <Input
+                            value={newOffer.accountDetails.accountName}
+                            onChange={(e) => setNewOffer({
+                              ...newOffer,
+                              accountDetails: { ...newOffer.accountDetails, accountName: e.target.value }
+                            })}
+                            className="bg-gray-800 border-gray-700"
+                            placeholder="Account username/name"
+                            data-testid="input-account-name"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Account Email</Label>
+                        <Input
+                          type="email"
+                          value={newOffer.accountDetails.email}
+                          onChange={(e) => setNewOffer({
+                            ...newOffer,
+                            accountDetails: { ...newOffer.accountDetails, email: e.target.value }
+                          })}
+                          className="bg-gray-800 border-gray-700"
+                          placeholder="email@example.com"
+                          data-testid="input-account-email"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Account Password</Label>
+                          <Input
+                            type="password"
+                            value={newOffer.accountDetails.password}
+                            onChange={(e) => setNewOffer({
+                              ...newOffer,
+                              accountDetails: { ...newOffer.accountDetails, password: e.target.value }
+                            })}
+                            className="bg-gray-800 border-gray-700"
+                            placeholder="Account password"
+                            data-testid="input-account-password"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Confirm Password</Label>
+                          <Input
+                            type="password"
+                            value={newOffer.accountDetails.confirmPassword}
+                            onChange={(e) => setNewOffer({
+                              ...newOffer,
+                              accountDetails: { ...newOffer.accountDetails, confirmPassword: e.target.value }
+                            })}
+                            className="bg-gray-800 border-gray-700"
+                            placeholder="Confirm password"
+                            data-testid="input-confirm-password"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Email Account Password</Label>
+                        <Input
+                          type="password"
+                          value={newOffer.accountDetails.emailPassword}
+                          onChange={(e) => setNewOffer({
+                            ...newOffer,
+                            accountDetails: { ...newOffer.accountDetails, emailPassword: e.target.value }
+                          })}
+                          className="bg-gray-800 border-gray-700"
+                          placeholder="Password for the email account"
+                          data-testid="input-email-password"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!isKycVerified && (
+                    <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                      <p className="text-yellow-400 text-sm">Complete KYC verification to add account details to your offers.</p>
+                    </div>
+                  )}
+
                   <Button
                     className="w-full bg-purple-600 hover:bg-purple-700"
                     onClick={() => createOfferMutation.mutate(newOffer)}

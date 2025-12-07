@@ -497,10 +497,8 @@ export async function registerRoutes(
 
       await holdEscrow(offer.vendorId, amount, order.id);
 
-      const autoReleaseTime = new Date(Date.now() + 30 * 60 * 1000);
       await storage.updateOrder(order.id, {
         escrowHeldAt: new Date(),
-        autoReleaseAt: autoReleaseTime,
       });
 
       await notifyOrderCreated(order.id, req.user!.userId, offer.vendorId);
@@ -571,22 +569,19 @@ export async function registerRoutes(
     }
   });
 
-  // Confirm order (vendor)
-  app.post("/api/orders/:id/confirm", requireAuth, async (req: AuthRequest, res) => {
+  // Confirm order and release - ADMIN ONLY
+  app.post("/api/orders/:id/confirm", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
 
-      const vendorProfile = await storage.getVendorProfile(order.vendorId);
-      if (vendorProfile?.userId !== req.user!.userId) {
-        return res.status(403).json({ message: "Not authorized" });
-      }
-
       if (order.status !== "paid") {
         return res.status(400).json({ message: "Order must be paid first" });
       }
+
+      const vendorProfile = await storage.getVendorProfile(order.vendorId);
 
       const updated = await storage.updateOrder(req.params.id, {
         status: "completed",
@@ -599,20 +594,49 @@ export async function registerRoutes(
 
       await notifyOrderCompleted(req.params.id, order.buyerId);
 
-      await storage.updateVendorStats(order.vendorId, {
-        completedTrades: (vendorProfile?.completedTrades || 0) + 1,
-        totalTrades: (vendorProfile?.totalTrades || 0) + 1,
-      });
+      if (vendorProfile) {
+        await storage.updateVendorStats(order.vendorId, {
+          completedTrades: (vendorProfile.completedTrades || 0) + 1,
+          totalTrades: (vendorProfile.totalTrades || 0) + 1,
+        });
+      }
 
       await storage.createChatMessage({
         orderId: req.params.id,
         senderId: req.user!.userId,
-        message: "Order completed successfully",
+        message: "Order completed and released by admin",
       });
 
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get account details for completed order (buyer only)
+  app.get("/api/orders/:id/account-details", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (order.buyerId !== req.user!.userId && req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      if (order.status !== "completed") {
+        return res.status(400).json({ message: "Account details are only available after order is completed" });
+      }
+
+      const offer = await storage.getOffer(order.offerId);
+      if (!offer) {
+        return res.status(404).json({ message: "Offer not found" });
+      }
+
+      res.json({ accountDetails: offer.accountDetails || null });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

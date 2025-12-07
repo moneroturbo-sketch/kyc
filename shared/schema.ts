@@ -95,6 +95,7 @@ export const offers = pgTable("offers", {
   availableAmount: numeric("available_amount", { precision: 18, scale: 8 }).notNull(),
   paymentMethods: text("payment_methods").array().notNull(),
   terms: text("terms"),
+  accountDetails: jsonb("account_details"),
   isActive: boolean("is_active").notNull().default(true),
   isPriority: boolean("is_priority").notNull().default(false),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
