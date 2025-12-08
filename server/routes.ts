@@ -421,9 +421,15 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Vendor profile not approved. Please wait for admin approval." });
       }
 
+      // Automatically set tradeIntent based on offer type
+      // type "sell" = vendor is selling (sell_ad) 
+      // type "buy" = vendor is buying (buy_ad)
+      const tradeIntent = req.body.type === "buy" ? "buy_ad" : "sell_ad";
+
       const validatedData = insertOfferSchema.parse({
         ...req.body,
         vendorId: profile.id,
+        tradeIntent,
       });
 
       const offer = await storage.createOffer(validatedData);
