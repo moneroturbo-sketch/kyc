@@ -7,7 +7,7 @@ import { requireAuth, requireAdmin, requireRole, type AuthRequest } from "./midd
 import { loginLimiter, registerLimiter, apiLimiter } from "./middleware/rateLimiter";
 import { upload } from "./middleware/upload";
 import { generateTotpSecret, verifyTotp, generateRecoveryCodes } from "./utils/totp";
-import { holdEscrow, releaseEscrow, refundEscrow } from "./services/escrow";
+import { holdEscrow, releaseEscrow, refundEscrow, holdBuyerEscrow, releaseEscrowWithFee, refundBuyerEscrow } from "./services/escrow";
 import { 
   createNotification, 
   notifyOrderCreated, 
@@ -510,9 +510,20 @@ export async function registerRoutes(
         paymentMethod,
       });
 
+      const buyerWallet = await storage.getWalletByUserId(req.user!.userId, "USDT");
+      if (!buyerWallet) {
+        return res.status(400).json({ message: "Wallet not found" });
+      }
+
+      const buyerBalance = parseFloat(buyerWallet.availableBalance);
+      const escrowAmount = parseFloat(fiatAmount);
+      if (buyerBalance < escrowAmount) {
+        return res.status(400).json({ message: `Insufficient balance. You need ${escrowAmount} USDT but have ${buyerBalance.toFixed(2)} USDT. Please deposit funds to your wallet first.` });
+      }
+
       const order = await storage.createOrder(validatedData);
 
-      await holdEscrow(offer.vendorId, amount, order.id);
+      await holdBuyerEscrow(req.user!.userId, fiatAmount, order.id);
 
       await storage.updateOrder(order.id, {
         escrowHeldAt: new Date(),
@@ -586,7 +597,7 @@ export async function registerRoutes(
     }
   });
 
-  // Confirm order and release - Vendor or Admin
+  // Confirm delivery - Buyer confirms they received the product (or Admin can confirm)
   app.post("/api/orders/:id/confirm", requireAuth, async (req: AuthRequest, res) => {
     try {
       const order = await storage.getOrder(req.params.id);
@@ -594,27 +605,30 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Order not found" });
       }
 
-      // Check if user is the vendor for this order or an admin
       const vendorProfile = await storage.getVendorProfile(order.vendorId);
-      const isVendor = vendorProfile && vendorProfile.userId === req.user!.userId;
+      const isBuyer = order.buyerId === req.user!.userId;
       const isAdmin = req.user!.role === "admin";
       
-      if (!isVendor && !isAdmin) {
-        return res.status(403).json({ message: "Only the vendor or admin can confirm this order" });
+      if (!isBuyer && !isAdmin) {
+        return res.status(403).json({ message: "Only the buyer or admin can confirm delivery" });
       }
 
-      if (order.status !== "paid") {
-        return res.status(400).json({ message: "Order must be paid first" });
+      if (order.status !== "confirmed") {
+        return res.status(400).json({ message: "Seller must deliver the product first" });
       }
+
+      const { sellerAmount, platformFee } = await releaseEscrowWithFee(
+        order.buyerId,
+        order.vendorId,
+        order.fiatAmount,
+        order.id
+      );
 
       const updated = await storage.updateOrder(req.params.id, {
         status: "completed",
-        vendorConfirmedAt: new Date(),
         completedAt: new Date(),
         escrowReleasedAt: new Date(),
       });
-
-      await releaseEscrow(order.vendorId, order.buyerId, order.amount, order.id);
 
       await notifyOrderCompleted(req.params.id, order.buyerId);
 
@@ -623,13 +637,68 @@ export async function registerRoutes(
           completedTrades: (vendorProfile.completedTrades || 0) + 1,
           totalTrades: (vendorProfile.totalTrades || 0) + 1,
         });
+        
+        await createNotification(
+          vendorProfile.userId,
+          "payment",
+          "Payment Received",
+          `You received ${sellerAmount} USDT for order ${order.id} (10% platform fee: ${platformFee} USDT)`,
+          `/order/${order.id}`
+        );
       }
 
-      const confirmedBy = isAdmin ? "admin" : "vendor";
+      const confirmedBy = isAdmin ? "admin" : "buyer";
       await storage.createChatMessage({
         orderId: req.params.id,
         senderId: req.user!.userId,
-        message: `Order completed and released by ${confirmedBy}`,
+        message: `Delivery confirmed by ${confirmedBy}. Payment of ${sellerAmount} USDT released to seller (10% platform fee: ${platformFee} USDT).`,
+      });
+
+      res.json({ ...updated, sellerAmount, platformFee });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Seller delivers product - marks order as product delivered
+  app.post("/api/orders/:id/deliver", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const vendorProfile = await storage.getVendorProfile(order.vendorId);
+      const isVendor = vendorProfile && vendorProfile.userId === req.user!.userId;
+      const isAdmin = req.user!.role === "admin";
+      
+      if (!isVendor && !isAdmin) {
+        return res.status(403).json({ message: "Only the seller or admin can mark as delivered" });
+      }
+
+      if (order.status !== "paid") {
+        return res.status(400).json({ message: "Buyer must pay first" });
+      }
+
+      const { deliveryDetails } = req.body;
+
+      const updated = await storage.updateOrder(req.params.id, {
+        status: "confirmed",
+        vendorConfirmedAt: new Date(),
+      });
+
+      await createNotification(
+        order.buyerId,
+        "order",
+        "Product Delivered",
+        `Seller has delivered your order. Please review and confirm receipt.`,
+        `/order/${order.id}`
+      );
+
+      await storage.createChatMessage({
+        orderId: req.params.id,
+        senderId: req.user!.userId,
+        message: deliveryDetails ? `Product delivered: ${deliveryDetails}` : "Product has been delivered. Please review and confirm receipt.",
       });
 
       res.json(updated);
@@ -1054,9 +1123,9 @@ export async function registerRoutes(
       }
 
       if (status === "resolved_refund") {
-        await refundEscrow(order.vendorId, order.amount, order.id);
+        await refundBuyerEscrow(order.buyerId, order.fiatAmount, order.id);
       } else if (status === "resolved_release") {
-        await releaseEscrow(order.vendorId, order.buyerId, order.amount, order.id);
+        await releaseEscrowWithFee(order.buyerId, order.vendorId, order.fiatAmount, order.id);
       }
 
       const updated = await storage.updateDispute(req.params.id, {

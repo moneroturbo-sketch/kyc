@@ -111,15 +111,37 @@ export default function OrderDetailPage() {
       const res = await fetchWithAuth(`/api/orders/${orderId}/confirm`, {
         method: "POST",
       });
-      if (!res.ok) throw new Error("Failed to confirm order");
+      if (!res.ok) throw new Error("Failed to confirm delivery");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      toast({ 
+        title: "Delivery Confirmed!", 
+        description: `Payment released to seller (${data.sellerAmount} USDT after 10% platform fee)` 
+      });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Failed to confirm delivery" });
+    },
+  });
+
+  const deliverProductMutation = useMutation({
+    mutationFn: async (deliveryDetails: string | undefined = undefined) => {
+      const res = await fetchWithAuth(`/api/orders/${orderId}/deliver`, {
+        method: "POST",
+        body: JSON.stringify({ deliveryDetails }),
+      });
+      if (!res.ok) throw new Error("Failed to mark as delivered");
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-      toast({ title: "Order confirmed", description: "Account details delivered to buyer" });
+      toast({ title: "Product Delivered", description: "Waiting for buyer to confirm receipt" });
     },
     onError: () => {
-      toast({ variant: "destructive", title: "Failed to confirm order" });
+      toast({ variant: "destructive", title: "Failed to mark as delivered" });
     },
   });
 
@@ -175,9 +197,9 @@ export default function OrderDetailPage() {
   };
 
   const steps = [
-    { label: "Order Created", icon: Clock },
+    { label: "Funds Locked", icon: Lock },
     { label: "Payment Sent", icon: DollarSign },
-    { label: "Confirmed", icon: CheckCircle },
+    { label: "Product Delivered", icon: ArrowRight },
     { label: "Completed", icon: Unlock },
   ];
 
@@ -295,16 +317,28 @@ export default function OrderDetailPage() {
               {!isBuyer && order.status === "paid" && (
                 <Button
                   className="bg-green-600 hover:bg-green-700"
-                  onClick={() => confirmOrderMutation.mutate()}
-                  disabled={confirmOrderMutation.isPending}
-                  data-testid="button-confirm-order"
+                  onClick={() => deliverProductMutation.mutate(undefined)}
+                  disabled={deliverProductMutation.isPending}
+                  data-testid="button-deliver-product"
                 >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm Payment & Deliver Account
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Deliver Product
                 </Button>
               )}
 
-              {(order.status === "created" || order.status === "paid") && (
+              {isBuyer && order.status === "confirmed" && (
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => confirmOrderMutation.mutate()}
+                  disabled={confirmOrderMutation.isPending}
+                  data-testid="button-confirm-delivery"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirm Delivery (Release Payment)
+                </Button>
+              )}
+
+              {(order.status === "created" || order.status === "paid" || order.status === "confirmed") && (
                 <Button
                   variant="outline"
                   className="border-orange-600 text-orange-400 hover:bg-orange-600/20"
