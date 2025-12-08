@@ -506,7 +506,7 @@ export async function registerRoutes(
       }
 
       const tradeIntent = offer.tradeIntent || "sell_ad";
-      const platformFeeRate = 0.10;
+      const platformFeeRate = 0.20;
       const escrowAmount = parseFloat(fiatAmount);
       const platformFee = escrowAmount * platformFeeRate;
       const sellerReceives = escrowAmount - platformFee;
@@ -751,7 +751,7 @@ export async function registerRoutes(
           vendorProfile.userId,
           "payment",
           "Payment Received",
-          `You received ${sellerAmount} USDT for order ${order.id} (10% platform fee: ${platformFee} USDT)`,
+          `You received ${sellerAmount} USDT for order ${order.id} (20% platform fee: ${platformFee} USDT)`,
           `/order/${order.id}`
         );
       }
@@ -760,7 +760,7 @@ export async function registerRoutes(
       await storage.createChatMessage({
         orderId: req.params.id,
         senderId: req.user!.userId,
-        message: `Delivery confirmed by ${confirmedBy}. Payment of ${sellerAmount} USDT released to seller (10% platform fee: ${platformFee} USDT).`,
+        message: `Delivery confirmed by ${confirmedBy}. Payment of ${sellerAmount} USDT released to seller (20% platform fee: ${platformFee} USDT).`,
       });
 
       res.json({ ...updated, sellerAmount, platformFee });

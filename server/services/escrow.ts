@@ -1,6 +1,6 @@
 import { storage } from "../storage";
 
-const PLATFORM_FEE_PERCENT = 10;
+const PLATFORM_FEE_PERCENT = 20;
 
 export async function holdBuyerEscrow(
   buyerId: string,
@@ -96,7 +96,7 @@ export async function releaseEscrowWithFee(
     amount: sellerAmount.toFixed(8),
     currency: "USDT",
     relatedOrderId: orderId,
-    description: `Payment received for order ${orderId} (90% after platform fee)`,
+    description: `Payment received for order ${orderId} (80% after platform fee)`,
   });
 
   const newAdminBalance = (parseFloat(adminWallet.availableBalance) + platformFee).toFixed(8);
@@ -109,7 +109,7 @@ export async function releaseEscrowWithFee(
     amount: platformFee.toFixed(8),
     currency: "USDT",
     relatedOrderId: orderId,
-    description: `Platform service fee (10%) received for order ${orderId}`,
+    description: `Platform service fee (20%) received for order ${orderId}`,
   });
 
   await storage.createTransaction({
@@ -119,7 +119,7 @@ export async function releaseEscrowWithFee(
     amount: platformFee.toFixed(8),
     currency: "USDT",
     relatedOrderId: orderId,
-    description: `Platform service fee (10%) deducted for order ${orderId}`,
+    description: `Platform service fee (20%) deducted for order ${orderId}`,
   });
 
   return {
