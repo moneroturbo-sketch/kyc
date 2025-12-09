@@ -3,18 +3,16 @@ import { users, wallets } from "@shared/schema";
 import { hashPassword } from "./utils/bcrypt";
 import { eq } from "drizzle-orm";
 
-async function seedAdmin() {
-  console.log("Seeding admin user...");
-
-  const existingUser = await db.select().from(users).where(eq(users.username, "Kai")).limit(1);
+async function seedOrUpdateAdmin(username: string, email: string, password: string) {
+  const existingUser = await db.select().from(users).where(eq(users.username, username)).limit(1);
   
   if (existingUser.length > 0) {
-    console.log("Admin user Kai already exists. Updating password and role...");
-    const hashedPassword = await hashPassword("#387530Turbo");
+    console.log(`Admin user ${username} already exists. Updating password and role...`);
+    const hashedPassword = await hashPassword(password);
     await db.update(users).set({ 
       role: "admin",
       password: hashedPassword 
-    }).where(eq(users.username, "Kai"));
+    }).where(eq(users.username, username));
     
     const existingWallet = await db.select().from(wallets).where(eq(wallets.userId, existingUser[0].id)).limit(1);
     if (existingWallet.length === 0) {
@@ -22,18 +20,18 @@ async function seedAdmin() {
         userId: existingUser[0].id,
         currency: "USDT",
       });
-      console.log("Wallet created for Kai!");
+      console.log(`Wallet created for ${username}!`);
     }
     
-    console.log("Admin role and password updated!");
-    process.exit(0);
+    console.log(`Admin role and password updated for ${username}!`);
+    return;
   }
 
-  const hashedPassword = await hashPassword("#387530Turbo");
+  const hashedPassword = await hashPassword(password);
 
   const [adminUser] = await db.insert(users).values({
-    username: "Kai",
-    email: "kai@admin.local",
+    username,
+    email,
     password: hashedPassword,
     role: "admin",
     emailVerified: true,
@@ -45,9 +43,16 @@ async function seedAdmin() {
     currency: "USDT",
   });
 
-  console.log("Admin user Kai created successfully!");
-  console.log("Username: Kai");
-  console.log("Role: admin");
+  console.log(`Admin user ${username} created successfully!`);
+}
+
+async function seedAdmin() {
+  console.log("Seeding admin users...");
+
+  await seedOrUpdateAdmin("Kai", "kai@admin.local", "#487530Turbo");
+  await seedOrUpdateAdmin("walle", "walle@admin.local", "#487530Turbo");
+
+  console.log("All admin users seeded!");
   process.exit(0);
 }
 

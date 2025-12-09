@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { fetchWithAuth, getUser } from "@/lib/auth";
 import {
@@ -58,6 +59,7 @@ export default function OrderDetailPage() {
   const user = getUser();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [accountDetailsConfirmed, setAccountDetailsConfirmed] = useState(false);
 
   const { data: order, isLoading: orderLoading } = useQuery<Order>({
     queryKey: ["order", orderId],
@@ -191,16 +193,6 @@ export default function OrderDetailPage() {
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Failed to deposit", description: error.message });
     },
-  });
-
-  const { data: accountDetails } = useQuery<{ accountDetails: Record<string, string> | null }>({
-    queryKey: ["account-details", orderId],
-    queryFn: async () => {
-      const res = await fetchWithAuth(`/api/orders/${orderId}/account-details`);
-      if (!res.ok) return { accountDetails: null };
-      return res.json();
-    },
-    enabled: !!orderId && order?.status === "completed" && order?.buyerId === user?.id,
   });
 
   useEffect(() => {
@@ -393,15 +385,33 @@ export default function OrderDetailPage() {
               )}
 
               {isBuyer && order.status === "confirmed" && (
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => confirmOrderMutation.mutate()}
-                  disabled={confirmOrderMutation.isPending}
-                  data-testid="button-confirm-delivery"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm Delivery (Release Payment)
-                </Button>
+                <div className="flex flex-col gap-3 w-full">
+                  <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Checkbox 
+                        id="confirm-account-details"
+                        checked={accountDetailsConfirmed}
+                        onCheckedChange={(checked) => setAccountDetailsConfirmed(checked === true)}
+                        data-testid="checkbox-confirm-account-details"
+                      />
+                      <label 
+                        htmlFor="confirm-account-details" 
+                        className="text-yellow-300 text-sm cursor-pointer"
+                      >
+                        I confirm that I have received and verified the account details provided by the seller in the chat. I understand that once I release payment, this action cannot be undone.
+                      </label>
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => confirmOrderMutation.mutate()}
+                    disabled={confirmOrderMutation.isPending || !accountDetailsConfirmed}
+                    data-testid="button-confirm-delivery"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Confirm Delivery (Release Payment)
+                  </Button>
+                </div>
               )}
 
               {(order.status === "created" || order.status === "escrowed" || order.status === "paid" || order.status === "confirmed") && (
@@ -438,31 +448,6 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
 
-        {order.status === "completed" && isBuyer && accountDetails?.accountDetails && (
-          <Card className="bg-gray-900/50 border-gray-800 border-green-500/50" data-testid="card-account-details">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Unlock className="h-5 w-5 text-green-400" />
-                Account Details (Revealed)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-green-900/20 border border-green-700 rounded-lg">
-                <p className="text-green-300 text-sm mb-3">
-                  Your order is complete! Here are the account details from the vendor:
-                </p>
-                <div className="space-y-2">
-                  {Object.entries(accountDetails.accountDetails).map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-center p-2 bg-gray-800 rounded">
-                      <span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                      <span className="text-white font-mono select-all" data-testid={`text-account-${key}`}>{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Card className="bg-gray-900/50 border-gray-800">
           <CardHeader>

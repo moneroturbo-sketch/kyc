@@ -974,9 +974,22 @@ export async function registerRoutes(
         vendorOrders = await storage.getOrdersByVendor(vendorProfile.id);
       }
 
+      const allOrders = [...buyerOrders, ...vendorOrders];
+      const uniqueOrders = allOrders.filter((order, index, self) => 
+        index === self.findIndex(o => o.id === order.id)
+      );
+      const pendingOrders = uniqueOrders.filter(o => 
+        o.status === "created" || o.status === "awaiting_deposit" || o.status === "escrowed" || o.status === "paid" || o.status === "confirmed"
+      );
+      const cancelledOrders = uniqueOrders.filter(o => o.status === "cancelled");
+      const disputedOrders = uniqueOrders.filter(o => o.status === "disputed");
+
       res.json({
         buyerOrders,
         vendorOrders,
+        pendingOrders,
+        cancelledOrders,
+        disputedOrders,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -34,6 +34,9 @@ interface Order {
 interface OrdersData {
   buyerOrders: Order[];
   vendorOrders: Order[];
+  pendingOrders: Order[];
+  cancelledOrders: Order[];
+  disputedOrders: Order[];
 }
 
 export default function OrdersPage() {
@@ -179,12 +182,21 @@ export default function OrdersPage() {
               </div>
             ) : (
               <Tabs defaultValue="buying">
-                <TabsList className="mb-6">
+                <TabsList className="mb-6 flex-wrap">
                   <TabsTrigger value="buying" data-testid="tab-buying">
                     Buying ({data?.buyerOrders?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger value="selling" data-testid="tab-selling">
                     Selling ({data?.vendorOrders?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="pending" data-testid="tab-pending">
+                    Pending ({data?.pendingOrders?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="cancelled" data-testid="tab-cancelled">
+                    Cancelled ({data?.cancelledOrders?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="disputed" data-testid="tab-disputed">
+                    Disputed ({data?.disputedOrders?.length || 0})
                   </TabsTrigger>
                 </TabsList>
 
@@ -194,6 +206,18 @@ export default function OrdersPage() {
 
                 <TabsContent value="selling">
                   {renderOrderList(data?.vendorOrders || [], "vendor")}
+                </TabsContent>
+
+                <TabsContent value="pending">
+                  {renderOrderList(data?.pendingOrders || [], "buyer")}
+                </TabsContent>
+
+                <TabsContent value="cancelled">
+                  {renderOrderList(data?.cancelledOrders || [], "buyer")}
+                </TabsContent>
+
+                <TabsContent value="disputed">
+                  {renderOrderList(data?.disputedOrders || [], "buyer")}
                 </TabsContent>
               </Tabs>
             )}
