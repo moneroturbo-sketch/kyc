@@ -18,27 +18,38 @@ import VendorPage from "@/pages/VendorPage";
 import DisputeAdminPage from "@/pages/DisputeAdminPage";
 import NotFound from "@/pages/not-found";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles?: string[] }) {
   if (!isAuthenticated()) {
     return <Redirect to="/auth" />;
   }
+  
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  
+  if (user?.role === "dispute_admin" && allowedRoles && !allowedRoles.includes("dispute_admin")) {
+    return <Redirect to="/disputes" />;
+  }
+  
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    return <Redirect to="/" />;
+  }
+  
   return <Component />;
 }
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <ProtectedRoute component={HomePage} />} />
+      <Route path="/" component={() => <ProtectedRoute component={HomePage} allowedRoles={["user", "vendor", "admin"]} />} />
       <Route path="/auth" component={AuthPage} />
-      <Route path="/wallet" component={WalletPage} />
-      <Route path="/orders" component={OrdersPage} />
-      <Route path="/order/:id" component={OrderDetailPage} />
+      <Route path="/wallet" component={() => <ProtectedRoute component={WalletPage} allowedRoles={["user", "vendor", "admin"]} />} />
+      <Route path="/orders" component={() => <ProtectedRoute component={OrdersPage} allowedRoles={["user", "vendor", "admin"]} />} />
+      <Route path="/order/:id" component={() => <ProtectedRoute component={OrderDetailPage} allowedRoles={["user", "vendor", "admin"]} />} />
       <Route path="/trade/:id" component={TradePage} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/settings" component={SettingsPage} />
-      <Route path="/vendor" component={() => <ProtectedRoute component={VendorPage} />} />
-      <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
-      <Route path="/disputes" component={() => <ProtectedRoute component={DisputeAdminPage} />} />
+      <Route path="/vendor" component={() => <ProtectedRoute component={VendorPage} allowedRoles={["vendor", "admin"]} />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} allowedRoles={["admin"]} />} />
+      <Route path="/disputes" component={() => <ProtectedRoute component={DisputeAdminPage} allowedRoles={["admin", "dispute_admin"]} />} />
       <Route component={NotFound} />
     </Switch>
   );

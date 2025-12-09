@@ -87,7 +87,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
-              <Link href="/" className="flex items-center gap-2">
+              <Link href={isDisputeAdmin ? "/disputes" : "/"} className="flex items-center gap-2">
                 <div className="p-2 bg-purple-600 rounded-lg">
                   <Shield className="h-5 w-5 text-white" />
                 </div>
