@@ -7,6 +7,7 @@ async function seedOrUpdateAdmin(
   username: string,
   email: string,
   password: string,
+  role: "admin" | "dispute_admin" = "admin",
 ) {
   const existingUser = await db
     .select()
@@ -22,7 +23,7 @@ async function seedOrUpdateAdmin(
     await db
       .update(users)
       .set({
-        role: "admin",
+        role: role,
         password: hashedPassword,
       })
       .where(eq(users.username, username));
@@ -40,7 +41,7 @@ async function seedOrUpdateAdmin(
       console.log(`Wallet created for ${username}!`);
     }
 
-    console.log(`Admin role and password updated for ${username}!`);
+    console.log(`Role (${role}) and password updated for ${username}!`);
     return;
   }
 
@@ -52,7 +53,7 @@ async function seedOrUpdateAdmin(
       username,
       email,
       password: hashedPassword,
-      role: "admin",
+      role: role,
       emailVerified: true,
       isActive: true,
     })
@@ -63,14 +64,27 @@ async function seedOrUpdateAdmin(
     currency: "USDT",
   });
 
-  console.log(`Admin user ${username} created successfully!`);
+  console.log(`${role} user ${username} created successfully!`);
 }
 
 async function seedAdmin() {
   console.log("Seeding admin users...");
 
-  await seedOrUpdateAdmin("Kai", "kai@admin.local", "#487530Turbo");
-  await seedOrUpdateAdmin("walle", "walle@admin.local", "#487530Turbo");
+  const kaiPassword = process.env.ADMIN_KAI_PASSWORD;
+  const turboPassword = process.env.ADMIN_TURBO_PASSWORD;
+
+  if (!kaiPassword) {
+    console.error("ADMIN_KAI_PASSWORD environment variable not set!");
+    process.exit(1);
+  }
+
+  if (!turboPassword) {
+    console.error("ADMIN_TURBO_PASSWORD environment variable not set!");
+    process.exit(1);
+  }
+
+  await seedOrUpdateAdmin("Kai", "kai@admin.local", kaiPassword, "admin");
+  await seedOrUpdateAdmin("Turbo", "turbo@admin.local", turboPassword, "dispute_admin");
 
   console.log("All admin users seeded!");
   process.exit(0);
