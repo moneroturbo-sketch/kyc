@@ -41,7 +41,6 @@ export default function TradePage() {
 
   const [amount, setAmount] = useState("");
   const [fiatAmount, setFiatAmount] = useState("");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
 
   const { data: offer, isLoading } = useQuery<Offer>({
     queryKey: ["offer", offerId],
@@ -59,7 +58,7 @@ export default function TradePage() {
         offerId,
         amount,
         fiatAmount,
-        paymentMethod: selectedPaymentMethod,
+        paymentMethod: offer?.paymentMethods[0] || "Platform Wallet",
       };
 
       if (offer?.tradeIntent === "buy_ad") {
@@ -223,19 +222,12 @@ export default function TradePage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Payment Method</Label>
-              <div className="flex flex-wrap gap-2">
-                {offer.paymentMethods.map((method) => (
-                  <Button
-                    key={method}
-                    variant={selectedPaymentMethod === method ? "default" : "outline"}
-                    className={selectedPaymentMethod === method ? "bg-purple-600" : ""}
-                    onClick={() => setSelectedPaymentMethod(method)}
-                    data-testid={`button-payment-${method}`}
-                  >
-                    {method}
-                  </Button>
-                ))}
+              <Label className="text-gray-300">Account Type</Label>
+              <div className="p-3 bg-gray-800 rounded-lg">
+                <span className="text-white font-medium">
+                  {offer.paymentMethods[0]?.replace(" UID", "").replace(" Address", "") || "Platform"} Account
+                </span>
+                <p className="text-gray-400 text-sm mt-1">Payment via Platform Wallet</p>
               </div>
             </div>
 
@@ -265,7 +257,7 @@ export default function TradePage() {
 
             <Button
               className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-              disabled={!isValidAmount || !selectedPaymentMethod || createOrderMutation.isPending}
+              disabled={!isValidAmount || createOrderMutation.isPending}
               onClick={() => createOrderMutation.mutate()}
               data-testid="button-create-order"
             >

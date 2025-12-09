@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchWithAuth, isAuthenticated } from "@/lib/auth";
-import { PaymentMethodChips } from "@/components/marketplace/VendorCard";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -53,7 +52,7 @@ interface KycStatus {
 }
 
 const exchangeOptions = ["OKX", "Binance", "Bybit", "KuCoin", "Huobi", "Gate.io", "MEXC", "Bitget", "Coinbase", "Kraken"];
-const paymentOptions = ["Binance UID", "OKX UID", "MEXC UID", "Bybit UID", "Bitget UID", "Wallet Address", "Bank Transfer", "PayPal"];
+const accountTypeOptions = ["Binance", "OKX", "MEXC", "Bybit", "Bitget", "KuCoin", "Wallet"];
 
 export default function VendorPage() {
   const [, setLocation] = useLocation();
@@ -67,7 +66,7 @@ export default function VendorPage() {
     minLimit: "500",
     maxLimit: "50000",
     availableAmount: "100",
-    paymentMethods: ["Binance UID"] as string[],
+    accountType: "Binance",
     terms: "",
     accountDetails: {
       exchangeName: "",
@@ -111,7 +110,7 @@ export default function VendorPage() {
         minLimit: offer.minLimit,
         maxLimit: offer.maxLimit,
         availableAmount: offer.availableAmount,
-        paymentMethods: offer.paymentMethods,
+        paymentMethods: [offer.accountType === "Wallet" ? "Wallet Address" : `${offer.accountType} UID`],
         terms: offer.terms,
       };
       if (isKycVerified && offer.accountDetails.email) {
@@ -145,7 +144,7 @@ export default function VendorPage() {
         minLimit: "",
         maxLimit: "",
         availableAmount: "",
-        paymentMethods: [],
+        accountType: "Binance",
         terms: "",
         accountDetails: {
           exchangeName: "",
@@ -272,13 +271,20 @@ export default function VendorPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Payment Methods</Label>
-                    <PaymentMethodChips
-                      methods={paymentOptions}
-                      selected={newOffer.paymentMethods}
-                      onChange={(methods) => setNewOffer({ ...newOffer, paymentMethods: methods })}
-                      selectable
-                    />
+                    <Label>Account Type</Label>
+                    <Select
+                      value={newOffer.accountType}
+                      onValueChange={(v) => setNewOffer({ ...newOffer, accountType: v })}
+                    >
+                      <SelectTrigger className="bg-gray-800 border-gray-700" data-testid="select-account-type">
+                        <SelectValue placeholder="Select account type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accountTypeOptions.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Terms (Optional)</Label>
@@ -515,7 +521,9 @@ export default function VendorPage() {
                         </div>
                       </div>
                       <div className="mt-3">
-                        <PaymentMethodChips methods={offer.paymentMethods} />
+                        <Badge variant="outline" className="text-primary border-primary">
+                          {offer.paymentMethods[0]?.replace(" UID", "").replace(" Address", "") || "Unknown"} Account
+                        </Badge>
                       </div>
                     </div>
                   ))}

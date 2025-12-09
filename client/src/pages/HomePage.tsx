@@ -62,19 +62,15 @@ export default function HomePage() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [selectedAccount, setSelectedAccount] = useState("all");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: offers, isLoading } = useQuery<Offer[]>({
-    queryKey: ["offers", activeTab === "buy" ? "sell" : "buy", selectedAccount, selectedPaymentMethod, searchQuery],
+    queryKey: ["offers", activeTab === "buy" ? "sell" : "buy", selectedAccount, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("type", activeTab === "buy" ? "sell" : "buy");
       if (selectedAccount && selectedAccount !== "all") {
-        params.append("accountType", selectedAccount);
-      }
-      if (selectedPaymentMethod && selectedPaymentMethod !== "all") {
-        params.append("paymentMethod", selectedPaymentMethod);
+        params.append("paymentMethod", selectedAccount);
       }
       if (searchQuery) {
         params.append("search", searchQuery);
@@ -211,23 +207,6 @@ export default function HomePage() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-              <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-payment">
-                <div className="flex items-center gap-1 text-foreground font-medium text-sm">
-                  <SelectValue placeholder="All Payments" />
-                  <ChevronDown className="h-4 w-4" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payments</SelectItem>
-                <SelectItem value="Binance UID">Binance UID</SelectItem>
-                <SelectItem value="OKX UID">OKX UID</SelectItem>
-                <SelectItem value="MEXC UID">MEXC UID</SelectItem>
-                <SelectItem value="Bybit UID">Bybit UID</SelectItem>
-                <SelectItem value="Bitget UID">Bitget UID</SelectItem>
-                <SelectItem value="Wallet Address">Wallet Address</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <button className="p-2" data-testid="button-filter">
             <Filter className="h-5 w-5 text-muted-foreground" />

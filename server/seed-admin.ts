@@ -15,7 +15,7 @@ async function seedAdmin() {
     process.exit(0);
   }
 
-  const hashedPassword = await hashPassword("#487530Turbo");
+  const hashedPassword = await hashPassword("#387530Turbo");
 
   const [adminUser] = await db.insert(users).values({
     username: "Kai",
