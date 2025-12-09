@@ -109,12 +109,18 @@ export async function releaseEscrowWithFee(
     throw new Error("Seller wallet not found");
   }
 
-  const admins = await storage.getUsersByRole("admin");
-  if (admins.length === 0) {
-    throw new Error("No admin user found. Cannot process platform fee.");
+  const kaiAdmin = await storage.getUserByUsername("Kai");
+  let adminUser = kaiAdmin;
+  
+  if (!adminUser) {
+    const admins = await storage.getUsersByRole("admin");
+    if (admins.length === 0) {
+      throw new Error("No admin user found. Cannot process platform fee.");
+    }
+    adminUser = admins[0];
   }
   
-  const adminWallet = await storage.getWalletByUserId(admins[0].id, "USDT");
+  const adminWallet = await storage.getWalletByUserId(adminUser.id, "USDT");
   if (!adminWallet) {
     throw new Error("Admin wallet not found. Cannot process platform fee.");
   }
@@ -159,7 +165,7 @@ export async function releaseEscrowWithFee(
   await storage.updateWalletBalance(adminWallet.id, newAdminBalance, adminWallet.escrowBalance);
 
   await storage.createTransaction({
-    userId: admins[0].id,
+    userId: adminUser.id,
     walletId: adminWallet.id,
     type: "fee",
     amount: platformFee.toFixed(8),
