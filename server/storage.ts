@@ -106,6 +106,7 @@ export interface IStorage {
   createDispute(dispute: InsertDispute): Promise<Dispute>;
   updateDispute(id: string, updates: Partial<Dispute>): Promise<Dispute | undefined>;
   getOpenDisputes(): Promise<Dispute[]>;
+  getResolvedDisputes(): Promise<Dispute[]>;
 
   // Dispute Chat Messages
   getDisputeChatMessages(disputeId: string): Promise<DisputeChatMessage[]>;
@@ -452,6 +453,19 @@ export class DatabaseStorage implements IStorage {
 
   async getOpenDisputes(): Promise<Dispute[]> {
     return await db.select().from(disputes).where(eq(disputes.status, "open")).orderBy(desc(disputes.createdAt));
+  }
+
+  async getResolvedDisputes(): Promise<Dispute[]> {
+    return await db
+      .select()
+      .from(disputes)
+      .where(
+        or(
+          eq(disputes.status, "resolved_refund"),
+          eq(disputes.status, "resolved_release")
+        )
+      )
+      .orderBy(desc(disputes.resolvedAt));
   }
 
   // Dispute Chat Messages

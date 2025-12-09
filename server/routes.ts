@@ -1481,6 +1481,32 @@ export async function registerRoutes(
     }
   });
 
+  // Get resolved disputes with resolver info
+  app.get("/api/admin/disputes/resolved", requireAuth, requireDisputeAdmin, async (req: AuthRequest, res) => {
+    try {
+      const disputes = await storage.getResolvedDisputes();
+      
+      // Add resolver name to each dispute
+      const disputesWithResolver = await Promise.all(
+        disputes.map(async (dispute) => {
+          let resolverName = null;
+          if (dispute.resolvedBy) {
+            const resolver = await storage.getUser(dispute.resolvedBy);
+            resolverName = resolver?.username || null;
+          }
+          return {
+            ...dispute,
+            resolverName,
+          };
+        })
+      );
+      
+      res.json(disputesWithResolver);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get dispute details with order info, chat messages, and wallet info
   app.get("/api/admin/disputes/:id/details", requireAuth, requireDisputeAdmin, async (req: AuthRequest, res) => {
     try {
@@ -1497,18 +1523,33 @@ export async function registerRoutes(
       // Get order chat messages
       const chatMessages = await storage.getChatMessagesByOrder(order.id);
 
-      // Get buyer info and wallet
-      const buyer = await storage.getUser(order.buyerId);
-      const buyerWallet = await storage.getWalletByUserId(order.buyerId, "USDT");
-
-      // Get seller info and wallet (via vendor profile)
+      // Get vendor profile to determine the vendor's user
       const vendorProfile = await storage.getVendorProfile(order.vendorId);
-      let seller = null;
-      let sellerWallet = null;
-      if (vendorProfile) {
-        seller = await storage.getUser(vendorProfile.userId);
-        sellerWallet = await storage.getWalletByUserId(vendorProfile.userId, "USDT");
+      const vendorUserId = vendorProfile?.userId;
+
+      // Determine actual buyer and seller based on tradeIntent
+      // sell_ad: vendor sells USDT to the order creator (buyerId is buyer)
+      // buy_ad: vendor buys USDT from the order creator (buyerId is seller)
+      let actualBuyerId: string;
+      let actualSellerId: string;
+
+      if (order.tradeIntent === "buy_ad") {
+        // Vendor wants to buy USDT, order creator is selling USDT
+        actualBuyerId = vendorUserId || order.vendorId;
+        actualSellerId = order.buyerId;
+      } else {
+        // sell_ad: Vendor sells USDT, order creator is buying USDT
+        actualBuyerId = order.buyerId;
+        actualSellerId = vendorUserId || order.vendorId;
       }
+
+      // Get buyer info and wallet
+      const buyer = await storage.getUser(actualBuyerId);
+      const buyerWallet = await storage.getWalletByUserId(actualBuyerId, "USDT");
+
+      // Get seller info and wallet
+      const seller = await storage.getUser(actualSellerId);
+      const sellerWallet = await storage.getWalletByUserId(actualSellerId, "USDT");
 
       res.json({
         dispute,
@@ -1545,7 +1586,32 @@ export async function registerRoutes(
   // Resolve dispute
   app.post("/api/admin/disputes/:id/resolve", requireAuth, requireDisputeAdmin, async (req: AuthRequest, res) => {
     try {
-      const { resolution, status, adminNotes } = req.body;
+      const { resolution, status, adminNotes, twoFactorToken } = req.body;
+
+      // Get the dispute admin user and verify 2FA
+      const user = await storage.getUser(req.user!.userId);
+      
+      // 2FA must be enabled for dispute admins to resolve disputes
+      if (!user?.twoFactorEnabled) {
+        return res.status(403).json({ 
+          message: "Two-factor authentication (2FA) must be enabled to resolve disputes. Please enable 2FA in your security settings.", 
+          requires2FASetup: true 
+        });
+      }
+
+      // 2FA token is required
+      if (!twoFactorToken) {
+        return res.status(403).json({ 
+          message: "Please enter your 2FA code to resolve this dispute.",
+          requires2FA: true 
+        });
+      }
+
+      // Verify the 2FA token
+      const isValid = verifyTotp(twoFactorToken, user.twoFactorSecret!);
+      if (!isValid) {
+        return res.status(403).json({ message: "Invalid 2FA code. Please try again." });
+      }
 
       const dispute = await storage.getDispute(req.params.id);
       if (!dispute) {

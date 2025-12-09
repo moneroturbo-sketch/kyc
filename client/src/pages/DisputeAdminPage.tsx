@@ -48,6 +48,13 @@ interface Dispute {
   createdAt: string;
 }
 
+interface ResolvedDispute extends Dispute {
+  resolution: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolverName: string | null;
+}
+
 interface DisputeDetails {
   dispute: Dispute;
   order: {
@@ -81,6 +88,10 @@ export default function DisputeAdminPage() {
   const [freezeReason, setFreezeReason] = useState("");
   const [freezeUserId, setFreezeUserId] = useState<string | null>(null);
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
+  const [showResolvedDisputes, setShowResolvedDisputes] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [twoFactorToken, setTwoFactorToken] = useState("");
+  const [pendingResolveStatus, setPendingResolveStatus] = useState<string | null>(null);
 
   if (user?.role !== "dispute_admin" && user?.role !== "admin") {
     setLocation("/");
@@ -103,6 +114,16 @@ export default function DisputeAdminPage() {
       if (!res.ok) throw new Error("Failed to fetch disputes");
       return res.json();
     },
+  });
+
+  const { data: resolvedDisputes, isLoading: resolvedLoading } = useQuery<ResolvedDispute[]>({
+    queryKey: ["resolvedDisputes"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/admin/disputes/resolved");
+      if (!res.ok) throw new Error("Failed to fetch resolved disputes");
+      return res.json();
+    },
+    enabled: showResolvedDisputes,
   });
 
   const { data: disputeDetails, isLoading: detailsLoading } = useQuery<DisputeDetails>({
@@ -136,27 +157,63 @@ export default function DisputeAdminPage() {
   });
 
   const resolveDisputeMutation = useMutation({
-    mutationFn: async ({ status, resolution }: { status: string; resolution: string }) => {
+    mutationFn: async ({ status, resolution, twoFactorToken }: { status: string; resolution: string; twoFactorToken: string }) => {
       const res = await fetchWithAuth(`/api/admin/disputes/${selectedDispute}/resolve`, {
         method: "POST",
-        body: JSON.stringify({ status, resolution, adminNotes: resolution }),
+        body: JSON.stringify({ status, resolution, adminNotes: resolution, twoFactorToken }),
       });
-      if (!res.ok) throw new Error("Failed to resolve dispute");
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.requires2FA) {
+          throw { requires2FA: true, message: data.message };
+        }
+        if (data.requires2FASetup) {
+          throw { requires2FASetup: true, message: data.message };
+        }
+        throw new Error(data.message || "Failed to resolve dispute");
+      }
+      return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["openDisputes"] });
       queryClient.invalidateQueries({ queryKey: ["disputeStats"] });
+      queryClient.invalidateQueries({ queryKey: ["resolvedDisputes"] });
       queryClient.invalidateQueries({ queryKey: ["disputeDetails", selectedDispute] });
       setSelectedDispute(null);
       setResolution("");
+      setShow2FADialog(false);
+      setTwoFactorToken("");
+      setPendingResolveStatus(null);
       const action = variables.status === "resolved_refund" ? "refunded to buyer" : "released to seller";
       toast({ title: "Dispute Resolved", description: `Funds have been ${action}` });
     },
-    onError: () => {
-      toast({ variant: "destructive", title: "Failed to resolve dispute" });
+    onError: (error: any) => {
+      if (error.requires2FA) {
+        setShow2FADialog(true);
+        return;
+      }
+      if (error.requires2FASetup) {
+        toast({ variant: "destructive", title: "2FA Required", description: error.message });
+        return;
+      }
+      toast({ variant: "destructive", title: "Failed to resolve dispute", description: error.message });
     },
   });
+
+  const handleResolveClick = (status: string) => {
+    setPendingResolveStatus(status);
+    setShow2FADialog(true);
+  };
+
+  const handleConfirmResolve = () => {
+    if (pendingResolveStatus && resolution.trim() && twoFactorToken.trim()) {
+      resolveDisputeMutation.mutate({ 
+        status: pendingResolveStatus, 
+        resolution, 
+        twoFactorToken 
+      });
+    }
+  };
 
   const freezeUserMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
@@ -266,51 +323,120 @@ export default function DisputeAdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="bg-gray-900/50 border-gray-800 lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-orange-400" />
-                Open Disputes
-              </CardTitle>
+              <div className="flex gap-2 mb-2">
+                <Button
+                  size="sm"
+                  variant={!showResolvedDisputes ? "default" : "outline"}
+                  className={!showResolvedDisputes ? "bg-orange-600 hover:bg-orange-700" : "border-gray-700"}
+                  onClick={() => setShowResolvedDisputes(false)}
+                  data-testid="button-show-open-disputes"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  Open ({disputes?.length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={showResolvedDisputes ? "default" : "outline"}
+                  className={showResolvedDisputes ? "bg-green-600 hover:bg-green-700" : "border-gray-700"}
+                  onClick={() => setShowResolvedDisputes(true)}
+                  data-testid="button-show-resolved-disputes"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Resolved
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {disputesLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-20 bg-gray-800" />
-                  ))}
-                </div>
-              ) : disputes && disputes.length > 0 ? (
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                  {disputes.map((dispute) => (
-                    <div
-                      key={dispute.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedDispute === dispute.id
-                          ? "bg-orange-900/50 border border-orange-600"
-                          : "bg-gray-800 hover:bg-gray-700"
-                      }`}
-                      onClick={() => setSelectedDispute(dispute.id)}
-                      data-testid={`dispute-item-${dispute.id}`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-white font-medium text-sm">
-                          Order #{dispute.orderId.slice(0, 8)}
-                        </span>
-                        <Badge className="bg-orange-600 text-xs">
-                          {dispute.status === "open" ? "Open" : "In Review"}
-                        </Badge>
+              {!showResolvedDisputes ? (
+                disputesLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 bg-gray-800" />
+                    ))}
+                  </div>
+                ) : disputes && disputes.length > 0 ? (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {disputes.map((dispute) => (
+                      <div
+                        key={dispute.id}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                          selectedDispute === dispute.id
+                            ? "bg-orange-900/50 border border-orange-600"
+                            : "bg-gray-800 hover:bg-gray-700"
+                        }`}
+                        onClick={() => setSelectedDispute(dispute.id)}
+                        data-testid={`dispute-item-${dispute.id}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white font-medium text-sm">
+                            Order #{dispute.orderId.slice(0, 8)}
+                          </span>
+                          <Badge className="bg-orange-600 text-xs">
+                            {dispute.status === "open" ? "Open" : "In Review"}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          {new Date(dispute.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        {new Date(dispute.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+                    <p className="text-gray-400">No open disputes</p>
+                  </div>
+                )
               ) : (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                  <p className="text-gray-400">No open disputes</p>
-                </div>
+                resolvedLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 bg-gray-800" />
+                    ))}
+                  </div>
+                ) : resolvedDisputes && resolvedDisputes.length > 0 ? (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {resolvedDisputes.map((dispute) => (
+                      <div
+                        key={dispute.id}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                          selectedDispute === dispute.id
+                            ? "bg-green-900/50 border border-green-600"
+                            : "bg-gray-800 hover:bg-gray-700"
+                        }`}
+                        onClick={() => setSelectedDispute(dispute.id)}
+                        data-testid={`resolved-dispute-item-${dispute.id}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white font-medium text-sm">
+                            Order #{dispute.orderId.slice(0, 8)}
+                          </span>
+                          <Badge className={dispute.status === "resolved_refund" ? "bg-blue-600 text-xs" : "bg-green-600 text-xs"}>
+                            {dispute.status === "resolved_refund" ? "Refunded" : "Released"}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-400 text-sm line-clamp-2">{dispute.resolution || dispute.reason}</p>
+                        <div className="flex justify-between items-center mt-1">
+                          <p className="text-gray-500 text-xs">
+                            {dispute.resolvedAt ? new Date(dispute.resolvedAt).toLocaleDateString() : ""}
+                          </p>
+                          {dispute.resolverName && (
+                            <p className="text-green-400 text-xs flex items-center gap-1">
+                              <Gavel className="h-3 w-3" />
+                              {dispute.resolverName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Shield className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400">No resolved disputes</p>
+                  </div>
+                )
               )}
             </CardContent>
           </Card>
@@ -472,7 +598,7 @@ export default function DisputeAdminPage() {
                     <div className="flex gap-3">
                       <Button
                         className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => resolveDisputeMutation.mutate({ status: "resolved_release", resolution })}
+                        onClick={() => handleResolveClick("resolved_release")}
                         disabled={!resolution.trim() || resolveDisputeMutation.isPending}
                         data-testid="button-release-to-seller"
                       >
@@ -481,7 +607,7 @@ export default function DisputeAdminPage() {
                       </Button>
                       <Button
                         className="flex-1 bg-blue-600 hover:bg-blue-700"
-                        onClick={() => resolveDisputeMutation.mutate({ status: "resolved_refund", resolution })}
+                        onClick={() => handleResolveClick("resolved_refund")}
                         disabled={!resolution.trim() || resolveDisputeMutation.isPending}
                         data-testid="button-refund-buyer"
                       >
@@ -539,6 +665,61 @@ export default function DisputeAdminPage() {
                   data-testid="button-confirm-freeze"
                 >
                   {freezeUserMutation.isPending ? "Freezing..." : "Freeze Account"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={show2FADialog} onOpenChange={(open) => {
+          setShow2FADialog(open);
+          if (!open) {
+            setTwoFactorToken("");
+            setPendingResolveStatus(null);
+          }
+        }}>
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <Shield className="h-5 w-5 text-green-400" />
+                Confirm with 2FA
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Enter your authenticator code to confirm this dispute resolution.
+                {pendingResolveStatus === "resolved_release" 
+                  ? " Funds will be released to the seller."
+                  : " Funds will be refunded to the buyer."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <Input
+                placeholder="Enter 6-digit code"
+                className="bg-gray-800 border-gray-700 text-white text-center text-lg tracking-widest"
+                value={twoFactorToken}
+                onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                maxLength={6}
+                data-testid="input-2fa-resolve"
+              />
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShow2FADialog(false);
+                    setTwoFactorToken("");
+                    setPendingResolveStatus(null);
+                  }}
+                  data-testid="button-cancel-2fa"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className={`flex-1 ${pendingResolveStatus === "resolved_release" ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                  onClick={handleConfirmResolve}
+                  disabled={twoFactorToken.length !== 6 || resolveDisputeMutation.isPending}
+                  data-testid="button-confirm-2fa-resolve"
+                >
+                  {resolveDisputeMutation.isPending ? "Processing..." : "Confirm Resolution"}
                 </Button>
               </div>
             </div>
