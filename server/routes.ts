@@ -902,14 +902,27 @@ export async function registerRoutes(
       // Require 2FA for non-admin users when releasing funds
       if (!isAdmin) {
         const user = await storage.getUser(req.user!.userId);
-        if (user?.twoFactorEnabled) {
-          if (!twoFactorToken) {
-            return res.status(400).json({ message: "2FA token required to release funds", requires2FA: true });
-          }
-          const isValid = verifyTotp(twoFactorToken, user.twoFactorSecret!);
-          if (!isValid) {
-            return res.status(401).json({ message: "Invalid 2FA token" });
-          }
+        
+        // 2FA must be enabled to release funds
+        if (!user?.twoFactorEnabled) {
+          return res.status(403).json({ 
+            message: "Two-factor authentication (2FA) must be enabled before confirming delivery. Please enable 2FA in your security settings.", 
+            requires2FASetup: true 
+          });
+        }
+        
+        // 2FA token is required
+        if (!twoFactorToken) {
+          return res.status(400).json({ 
+            message: "Please enter your authenticator code to confirm delivery and release funds.", 
+            requires2FA: true 
+          });
+        }
+        
+        // Verify the 2FA token
+        const isValid = verifyTotp(twoFactorToken, user.twoFactorSecret!);
+        if (!isValid) {
+          return res.status(401).json({ message: "Invalid authenticator code. Please try again." });
         }
       }
 

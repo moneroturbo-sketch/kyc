@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { fetchWithAuth, getUser } from "@/lib/auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   MessageCircle,
   Send,
@@ -21,6 +28,7 @@ import {
   ArrowRight,
   Lock,
   Unlock,
+  KeyRound,
 } from "lucide-react";
 
 interface Order {
@@ -57,9 +65,12 @@ export default function OrderDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const user = getUser();
+  const [, setLocation] = useLocation();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [accountDetailsConfirmed, setAccountDetailsConfirmed] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   const { data: order, isLoading: orderLoading } = useQuery<Order>({
     queryKey: ["order", orderId],
@@ -118,23 +129,49 @@ export default function OrderDetailPage() {
   });
 
   const confirmOrderMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (twoFactorToken?: string) => {
       const res = await fetchWithAuth(`/api/orders/${orderId}/confirm`, {
         method: "POST",
+        body: JSON.stringify({ twoFactorToken }),
       });
-      if (!res.ok) throw new Error("Failed to confirm delivery");
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.requires2FASetup) {
+          throw new Error("requires2FASetup");
+        }
+        if (data.requires2FA) {
+          throw new Error("requires2FA");
+        }
+        throw new Error(data.message || "Failed to confirm delivery");
+      }
+      return data;
     },
     onSuccess: (data) => {
+      setShow2FADialog(false);
+      setTwoFactorCode("");
       queryClient.invalidateQueries({ queryKey: ["order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
       toast({ 
         title: "Delivery Confirmed!", 
-        description: `Payment released to seller (${data.sellerAmount} USDT after 10% platform fee)` 
+        description: `Payment released to seller (${data.sellerAmount} USDT after 20% platform fee)` 
       });
     },
-    onError: () => {
-      toast({ variant: "destructive", title: "Failed to confirm delivery" });
+    onError: (error: Error) => {
+      if (error.message === "requires2FASetup") {
+        toast({ 
+          variant: "destructive", 
+          title: "2FA Required", 
+          description: "You must enable two-factor authentication before confirming delivery. Go to Settings > Security to enable 2FA." 
+        });
+        setLocation("/settings");
+        return;
+      }
+      if (error.message === "requires2FA") {
+        setShow2FADialog(true);
+        return;
+      }
+      setTwoFactorCode("");
+      toast({ variant: "destructive", title: "Failed to confirm delivery", description: error.message });
     },
   });
 
@@ -404,7 +441,7 @@ export default function OrderDetailPage() {
                   </div>
                   <Button
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => confirmOrderMutation.mutate()}
+                    onClick={() => confirmOrderMutation.mutate(undefined)}
                     disabled={confirmOrderMutation.isPending || !accountDetailsConfirmed}
                     data-testid="button-confirm-delivery"
                   >
@@ -511,6 +548,52 @@ export default function OrderDetailPage() {
             </form>
           </CardContent>
         </Card>
+
+        <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-purple-400" />
+                Authenticator Code Required
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Enter the 6-digit code from your authenticator app to confirm delivery and release payment. This ensures you authorized this transaction.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <Input
+                type="text"
+                placeholder="Enter 6-digit code"
+                className="bg-gray-800 border-gray-700 text-white text-center text-lg tracking-widest"
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                data-testid="input-2fa-code"
+              />
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShow2FADialog(false);
+                    setTwoFactorCode("");
+                  }}
+                  data-testid="button-cancel-2fa"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={() => confirmOrderMutation.mutate(twoFactorCode)}
+                  disabled={twoFactorCode.length !== 6 || confirmOrderMutation.isPending}
+                  data-testid="button-submit-2fa"
+                >
+                  {confirmOrderMutation.isPending ? "Confirming..." : "Confirm & Release"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
