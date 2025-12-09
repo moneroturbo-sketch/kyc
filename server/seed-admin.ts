@@ -9,9 +9,23 @@ async function seedAdmin() {
   const existingUser = await db.select().from(users).where(eq(users.username, "Kai")).limit(1);
   
   if (existingUser.length > 0) {
-    console.log("Admin user Kai already exists. Updating role to admin...");
-    await db.update(users).set({ role: "admin" }).where(eq(users.username, "Kai"));
-    console.log("Admin role updated!");
+    console.log("Admin user Kai already exists. Updating password and role...");
+    const hashedPassword = await hashPassword("#387530Turbo");
+    await db.update(users).set({ 
+      role: "admin",
+      password: hashedPassword 
+    }).where(eq(users.username, "Kai"));
+    
+    const existingWallet = await db.select().from(wallets).where(eq(wallets.userId, existingUser[0].id)).limit(1);
+    if (existingWallet.length === 0) {
+      await db.insert(wallets).values({
+        userId: existingUser[0].id,
+        currency: "USDT",
+      });
+      console.log("Wallet created for Kai!");
+    }
+    
+    console.log("Admin role and password updated!");
     process.exit(0);
   }
 
