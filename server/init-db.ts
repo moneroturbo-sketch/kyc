@@ -32,6 +32,7 @@ async function createTablesIfNotExist() {
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
       role user_role NOT NULL DEFAULT 'customer',
+      profile_picture TEXT,
       two_factor_enabled BOOLEAN NOT NULL DEFAULT false,
       two_factor_secret TEXT,
       two_factor_recovery_codes TEXT[],
@@ -344,6 +345,22 @@ async function createTablesIfNotExist() {
   `);
 }
 
+async function runMigrations() {
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture TEXT;`,
+  ];
+
+  for (const migration of migrations) {
+    try {
+      await pool.query(migration);
+    } catch (error: any) {
+      if (error.code !== '42701') {
+        console.error(`Migration error:`, error.message);
+      }
+    }
+  }
+}
+
 async function createIndexesIfNotExist() {
   const indexQueries = [
     `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
@@ -469,6 +486,115 @@ async function seedAdminUsers() {
   await seedOrUpdateAdmin("Turbo", "turbo@admin.local", turboPassword, "dispute_admin");
 }
 
+async function seedExchanges() {
+  const defaultExchanges = [
+    { name: "Tether USD", symbol: "USDT", description: "Tether stablecoin pegged to USD", sortOrder: 1 },
+    { name: "USD Coin", symbol: "USDC", description: "USD Coin stablecoin", sortOrder: 2 },
+    { name: "Bitcoin", symbol: "BTC", description: "Bitcoin cryptocurrency", sortOrder: 3 },
+    { name: "Ethereum", symbol: "ETH", description: "Ethereum cryptocurrency", sortOrder: 4 },
+    { name: "Binance USD", symbol: "BUSD", description: "Binance USD stablecoin", sortOrder: 5 },
+  ];
+
+  for (const exchange of defaultExchanges) {
+    try {
+      const existing = await pool.query(
+        `SELECT id FROM exchanges WHERE symbol = $1`,
+        [exchange.symbol]
+      );
+      if (existing.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO exchanges (name, symbol, description, sort_order, is_active) VALUES ($1, $2, $3, $4, true)`,
+          [exchange.name, exchange.symbol, exchange.description, exchange.sortOrder]
+        );
+        console.log(`Exchange ${exchange.symbol} seeded.`);
+      }
+    } catch (error: any) {
+      if (error.code !== '23505') {
+        console.error(`Error seeding exchange ${exchange.symbol}:`, error.message);
+      }
+    }
+  }
+}
+
+async function seedLoaderZoneDefaults() {
+  const adminUser = await pool.query(`SELECT id FROM users WHERE username = 'Kai' LIMIT 1`);
+  if (adminUser.rows.length === 0) return;
+  
+  const adminId = adminUser.rows[0].id;
+  
+  const existingAds = await pool.query(`SELECT id FROM loader_ads LIMIT 1`);
+  if (existingAds.rows.length > 0) {
+    console.log("Loader ads already exist, skipping seed.");
+    return;
+  }
+  
+  const sampleLoaderAds = [
+    {
+      loader_id: adminId,
+      asset_type: "USDT",
+      deal_amount: 5000,
+      loading_terms: "Quick loading service with competitive rates. Available 24/7.",
+      upfront_percentage: 10,
+      payment_methods: ["Bank Transfer", "Mobile Money"],
+      frozen_commitment: 500,
+    },
+    {
+      loader_id: adminId,
+      asset_type: "USDC",
+      deal_amount: 10000,
+      loading_terms: "Premium loading service. Fast and reliable.",
+      upfront_percentage: 15,
+      payment_methods: ["Bank Transfer", "PayPal"],
+      frozen_commitment: 1500,
+    },
+  ];
+  
+  for (const ad of sampleLoaderAds) {
+    try {
+      await pool.query(
+        `INSERT INTO loader_ads (loader_id, asset_type, deal_amount, loading_terms, upfront_percentage, payment_methods, frozen_commitment, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+        [ad.loader_id, ad.asset_type, ad.deal_amount, ad.loading_terms, ad.upfront_percentage, ad.payment_methods, ad.frozen_commitment]
+      );
+    } catch (error: any) {
+      console.error(`Error seeding loader ad:`, error.message);
+    }
+  }
+  console.log("Sample loader ads seeded.");
+}
+
+async function seedSocialFeedDefaults() {
+  const adminUser = await pool.query(`SELECT id FROM users WHERE username = 'Kai' LIMIT 1`);
+  if (adminUser.rows.length === 0) return;
+  
+  const adminId = adminUser.rows[0].id;
+  
+  const existingPosts = await pool.query(`SELECT id FROM social_posts LIMIT 1`);
+  if (existingPosts.rows.length > 0) {
+    console.log("Social posts already exist, skipping seed.");
+    return;
+  }
+  
+  const welcomePosts = [
+    "Welcome to our P2P trading platform! We're excited to have you here. Feel free to share your trading experiences and connect with other traders.",
+    "Trading tip: Always verify payment before releasing crypto. Stay safe and trade smart!",
+    "Looking for the best rates? Check out our marketplace for competitive offers from verified vendors.",
+  ];
+  
+  for (const content of welcomePosts) {
+    try {
+      await pool.query(
+        `INSERT INTO social_posts (author_id, content, likes_count, dislikes_count, comments_count, shares_count, is_deleted)
+         VALUES ($1, $2, 0, 0, 0, 0, false)`,
+        [adminId, content]
+      );
+    } catch (error: any) {
+      console.error(`Error seeding social post:`, error.message);
+    }
+  }
+  console.log("Sample social feed posts seeded.");
+}
+
 export async function initializeDatabase(): Promise<void> {
   console.log("Initializing database...");
   
@@ -479,11 +605,23 @@ export async function initializeDatabase(): Promise<void> {
     await createTablesIfNotExist();
     console.log("Tables created/verified.");
     
+    await runMigrations();
+    console.log("Migrations applied.");
+    
     await createIndexesIfNotExist();
     console.log("Indexes created/verified.");
     
     await seedAdminUsers();
     console.log("Admin users seeded/verified.");
+    
+    await seedExchanges();
+    console.log("Exchanges seeded/verified.");
+    
+    await seedLoaderZoneDefaults();
+    console.log("Loader Zone defaults seeded/verified.");
+    
+    await seedSocialFeedDefaults();
+    console.log("Social Feed defaults seeded/verified.");
     
     console.log("Database initialization complete!");
   } catch (error) {
