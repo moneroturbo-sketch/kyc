@@ -252,6 +252,53 @@ async function createTablesIfNotExist() {
   `);
 }
 
+async function createIndexesIfNotExist() {
+  const indexQueries = [
+    `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
+    `CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);`,
+    `CREATE INDEX IF NOT EXISTS idx_kyc_user_id ON kyc(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_kyc_status ON kyc(status);`,
+    `CREATE INDEX IF NOT EXISTS idx_vendor_profiles_user_id ON vendor_profiles(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_vendor_profiles_is_approved ON vendor_profiles(is_approved);`,
+    `CREATE INDEX IF NOT EXISTS idx_vendor_profiles_country ON vendor_profiles(country);`,
+    `CREATE INDEX IF NOT EXISTS idx_offers_vendor_id ON offers(vendor_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_offers_is_active ON offers(is_active);`,
+    `CREATE INDEX IF NOT EXISTS idx_offers_currency ON offers(currency);`,
+    `CREATE INDEX IF NOT EXISTS idx_offers_trade_intent ON offers(trade_intent);`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_buyer_id ON orders(buyer_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_vendor_id ON orders(vendor_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_offer_id ON orders(offer_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_chat_messages_order_id ON chat_messages(order_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON chat_messages(sender_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_disputes_order_id ON disputes(order_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);`,
+    `CREATE INDEX IF NOT EXISTS idx_disputes_opened_by ON disputes(opened_by);`,
+    `CREATE INDEX IF NOT EXISTS idx_dispute_chat_messages_dispute_id ON dispute_chat_messages(dispute_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_wallets_currency ON wallets(currency);`,
+    `CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_transactions_wallet_id ON transactions(wallet_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);`,
+    `CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_ratings_vendor_id ON ratings(vendor_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_ratings_order_id ON ratings(order_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);`,
+    `CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_exchanges_is_active ON exchanges(is_active);`,
+    `CREATE INDEX IF NOT EXISTS idx_exchanges_sort_order ON exchanges(sort_order);`,
+  ];
+
+  for (const query of indexQueries) {
+    await pool.query(query);
+  }
+}
+
 async function seedOrUpdateAdmin(
   username: string,
   email: string,
@@ -322,6 +369,9 @@ export async function initializeDatabase(): Promise<void> {
     
     await createTablesIfNotExist();
     console.log("Tables created/verified.");
+    
+    await createIndexesIfNotExist();
+    console.log("Indexes created/verified.");
     
     await seedAdminUsers();
     console.log("Admin users seeded/verified.");
