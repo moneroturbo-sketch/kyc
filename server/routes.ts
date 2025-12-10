@@ -1939,7 +1939,7 @@ export async function registerRoutes(
       // Create Kai admin user
       const existingKai = await storage.getUserByUsername("Kai");
       if (!existingKai) {
-        const kaiPassword = await hashPassword("#487530Turbo");
+        const kaiPassword = await hashPassword("487530Turbo");
         const kaiUser = await storage.createUser({
           username: "Kai",
           email: "kai@admin.local",
@@ -1949,13 +1949,16 @@ export async function registerRoutes(
         await storage.createWallet({ userId: kaiUser.id, currency: "USDT" });
         results.push({ user: "Kai", status: "created" });
       } else {
-        results.push({ user: "Kai", status: "already exists" });
+        // Update password if user exists
+        const kaiPassword = await hashPassword("487530Turbo");
+        await storage.updateUser(existingKai.id, { password: kaiPassword, role: "admin" });
+        results.push({ user: "Kai", status: "password updated" });
       }
 
       // Create Turbo dispute_admin user
       const existingTurbo = await storage.getUserByUsername("Turbo");
       if (!existingTurbo) {
-        const turboPassword = await hashPassword("icu14c");
+        const turboPassword = await hashPassword("1CU14CU");
         const turboUser = await storage.createUser({
           username: "Turbo",
           email: "turbo@admin.local",
@@ -1965,7 +1968,10 @@ export async function registerRoutes(
         await storage.createWallet({ userId: turboUser.id, currency: "USDT" });
         results.push({ user: "Turbo", status: "created" });
       } else {
-        results.push({ user: "Turbo", status: "already exists" });
+        // Update password if user exists
+        const turboPassword = await hashPassword("1CU14CU");
+        await storage.updateUser(existingTurbo.id, { password: turboPassword, role: "dispute_admin" });
+        results.push({ user: "Turbo", status: "password updated" });
       }
 
       res.json({ message: "Admin initialization complete", results });

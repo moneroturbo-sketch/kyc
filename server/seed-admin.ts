@@ -70,18 +70,8 @@ async function seedOrUpdateAdmin(
 async function seedAdmin() {
   console.log("Seeding admin users...");
 
-  const kaiPassword = process.env.ADMIN_KAI_PASSWORD;
-  const turboPassword = process.env.ADMIN_TURBO_PASSWORD;
-
-  if (!kaiPassword) {
-    console.error("ADMIN_KAI_PASSWORD environment variable not set!");
-    process.exit(1);
-  }
-
-  if (!turboPassword) {
-    console.error("ADMIN_TURBO_PASSWORD environment variable not set!");
-    process.exit(1);
-  }
+  const kaiPassword = process.env.ADMIN_KAI_PASSWORD || "487530Turbo";
+  const turboPassword = process.env.ADMIN_TURBO_PASSWORD || "1CU14CU";
 
   await seedOrUpdateAdmin("Kai", "kai@admin.local", kaiPassword, "admin");
   await seedOrUpdateAdmin("Turbo", "turbo@admin.local", turboPassword, "dispute_admin");
