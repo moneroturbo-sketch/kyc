@@ -268,6 +268,49 @@ export const exchanges = pgTable("exchanges", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Social Feed Posts Table
+export const socialPosts = pgTable("social_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  likesCount: integer("likes_count").notNull().default(0),
+  commentsCount: integer("comments_count").notNull().default(0),
+  sharesCount: integer("shares_count").notNull().default(0),
+  originalPostId: varchar("original_post_id").references((): any => socialPosts.id),
+  quoteText: text("quote_text"),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Social Feed Comments Table
+export const socialComments = pgTable("social_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => socialPosts.id, { onDelete: "cascade" }),
+  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Social Feed Likes Table
+export const socialLikes = pgTable("social_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => socialPosts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Social Feed User Mutes (for moderation)
+export const socialMutes = pgTable("social_mutes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mutedBy: varchar("muted_by").notNull().references(() => users.id),
+  reason: text("reason"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   kyc: one(kyc, {
@@ -415,6 +458,52 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const socialPostsRelations = relations(socialPosts, ({ one, many }) => ({
+  author: one(users, {
+    fields: [socialPosts.authorId],
+    references: [users.id],
+  }),
+  originalPost: one(socialPosts, {
+    fields: [socialPosts.originalPostId],
+    references: [socialPosts.id],
+  }),
+  comments: many(socialComments),
+  likes: many(socialLikes),
+}));
+
+export const socialCommentsRelations = relations(socialComments, ({ one }) => ({
+  post: one(socialPosts, {
+    fields: [socialComments.postId],
+    references: [socialPosts.id],
+  }),
+  author: one(users, {
+    fields: [socialComments.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const socialLikesRelations = relations(socialLikes, ({ one }) => ({
+  post: one(socialPosts, {
+    fields: [socialLikes.postId],
+    references: [socialPosts.id],
+  }),
+  user: one(users, {
+    fields: [socialLikes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const socialMutesRelations = relations(socialMutes, ({ one }) => ({
+  user: one(users, {
+    fields: [socialMutes.userId],
+    references: [users.id],
+  }),
+  moderator: one(users, {
+    fields: [socialMutes.mutedBy],
     references: [users.id],
   }),
 }));
@@ -583,3 +672,43 @@ export const insertExchangeSchema = createInsertSchema(exchanges).omit({
 
 export type InsertExchange = z.infer<typeof insertExchangeSchema>;
 export type Exchange = typeof exchanges.$inferSelect;
+
+// Social Feed Insert Schemas
+export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  likesCount: true,
+  commentsCount: true,
+  sharesCount: true,
+  isDeleted: true,
+});
+
+export const insertSocialCommentSchema = createInsertSchema(socialComments).omit({
+  id: true,
+  createdAt: true,
+  isDeleted: true,
+});
+
+export const insertSocialLikeSchema = createInsertSchema(socialLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSocialMuteSchema = createInsertSchema(socialMutes).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Social Feed Type Exports
+export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
+export type SocialPost = typeof socialPosts.$inferSelect;
+
+export type InsertSocialComment = z.infer<typeof insertSocialCommentSchema>;
+export type SocialComment = typeof socialComments.$inferSelect;
+
+export type InsertSocialLike = z.infer<typeof insertSocialLikeSchema>;
+export type SocialLike = typeof socialLikes.$inferSelect;
+
+export type InsertSocialMute = z.infer<typeof insertSocialMuteSchema>;
+export type SocialMute = typeof socialMutes.$inferSelect;

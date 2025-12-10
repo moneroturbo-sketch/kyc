@@ -2028,5 +2028,307 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== SOCIAL FEED ROUTES ====================
+
+  // Get social feed posts
+  app.get("/api/social/posts", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const posts = await storage.getSocialPosts(limit, offset);
+      res.json(posts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get single post with comments
+  app.get("/api/social/posts/:id", async (req, res) => {
+    try {
+      const post = await storage.getSocialPost(req.params.id);
+      if (!post || post.isDeleted) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      const comments = await storage.getSocialCommentsByPost(req.params.id);
+      res.json({ ...post, comments });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create post
+  app.post("/api/social/posts", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const isMuted = await storage.isUserMuted(req.user!.userId);
+      if (isMuted) {
+        return res.status(403).json({ message: "You are muted from the social feed" });
+      }
+
+      const { content, originalPostId, quoteText } = req.body;
+
+      if (!content || content.length === 0) {
+        return res.status(400).json({ message: "Post content is required" });
+      }
+
+      if (content.length > 800) {
+        return res.status(400).json({ message: "Post content cannot exceed 800 characters" });
+      }
+
+      const post = await storage.createSocialPost({
+        authorId: req.user!.userId,
+        content,
+        originalPostId: originalPostId || null,
+        quoteText: quoteText || null,
+      });
+
+      if (originalPostId) {
+        await storage.updateSocialPost(originalPostId, {
+          sharesCount: db.$client ? undefined : undefined,
+        });
+        const originalPost = await storage.getSocialPost(originalPostId);
+        if (originalPost) {
+          await storage.updateSocialPost(originalPostId, {
+            sharesCount: originalPost.sharesCount + 1,
+          });
+        }
+      }
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "social_post_created",
+        resource: "social_posts",
+        resourceId: post.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json(post);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Delete post (author or admin)
+  app.delete("/api/social/posts/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const post = await storage.getSocialPost(req.params.id);
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
+      const user = await storage.getUser(req.user!.userId);
+      const isAdmin = user?.role === "admin";
+      const isAuthor = post.authorId === req.user!.userId;
+
+      if (!isAdmin && !isAuthor) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      await storage.deleteSocialPost(req.params.id);
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: isAdmin && !isAuthor ? "social_post_deleted_admin" : "social_post_deleted",
+        resource: "social_posts",
+        resourceId: req.params.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Post deleted" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get comments for a post
+  app.get("/api/social/posts/:id/comments", async (req, res) => {
+    try {
+      const comments = await storage.getSocialCommentsByPost(req.params.id);
+      res.json(comments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create comment
+  app.post("/api/social/posts/:id/comments", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const isMuted = await storage.isUserMuted(req.user!.userId);
+      if (isMuted) {
+        return res.status(403).json({ message: "You are muted from the social feed" });
+      }
+
+      const post = await storage.getSocialPost(req.params.id);
+      if (!post || post.isDeleted) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
+      const { content } = req.body;
+
+      if (!content || content.length === 0) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+
+      if (content.length > 500) {
+        return res.status(400).json({ message: "Comment cannot exceed 500 characters" });
+      }
+
+      const comment = await storage.createSocialComment({
+        postId: req.params.id,
+        authorId: req.user!.userId,
+        content,
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "social_comment_created",
+        resource: "social_comments",
+        resourceId: comment.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json(comment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Delete comment (author or admin)
+  app.delete("/api/social/comments/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const comment = await storage.getSocialComment(req.params.id);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      const user = await storage.getUser(req.user!.userId);
+      const isAdmin = user?.role === "admin";
+      const isAuthor = comment.authorId === req.user!.userId;
+
+      if (!isAdmin && !isAuthor) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      await storage.deleteSocialComment(req.params.id);
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: isAdmin && !isAuthor ? "social_comment_deleted_admin" : "social_comment_deleted",
+        resource: "social_comments",
+        resourceId: req.params.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Comment deleted" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Like a post
+  app.post("/api/social/posts/:id/like", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const post = await storage.getSocialPost(req.params.id);
+      if (!post || post.isDeleted) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
+      const existingLike = await storage.getSocialLike(req.params.id, req.user!.userId);
+      if (existingLike) {
+        return res.json({ message: "Already liked", liked: true });
+      }
+
+      await storage.createSocialLike({
+        postId: req.params.id,
+        userId: req.user!.userId,
+      });
+
+      res.json({ message: "Post liked", liked: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Unlike a post
+  app.delete("/api/social/posts/:id/like", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteSocialLike(req.params.id, req.user!.userId);
+      res.json({ message: "Like removed", liked: false });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Check if user liked a post
+  app.get("/api/social/posts/:id/liked", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const like = await storage.getSocialLike(req.params.id, req.user!.userId);
+      res.json({ liked: !!like });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Mute a user from social feed
+  app.post("/api/admin/social/mute/:userId", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const targetUser = await storage.getUser(req.params.userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { reason, expiresAt } = req.body;
+
+      const existingMute = await storage.getSocialMute(req.params.userId);
+      if (existingMute) {
+        return res.status(400).json({ message: "User is already muted" });
+      }
+
+      const mute = await storage.createSocialMute({
+        userId: req.params.userId,
+        mutedBy: req.user!.userId,
+        reason: reason || "Moderation action",
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "social_user_muted",
+        resource: "social_mutes",
+        resourceId: mute.id,
+        changes: { targetUserId: req.params.userId, reason },
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "User muted from social feed", mute });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin: Unmute a user from social feed
+  app.delete("/api/admin/social/mute/:userId", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteSocialMute(req.params.userId);
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "social_user_unmuted",
+        resource: "social_mutes",
+        resourceId: req.params.userId,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "User unmuted from social feed" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

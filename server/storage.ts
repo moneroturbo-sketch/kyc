@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, gte, lte, or, like } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, or, like, isNull } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -17,6 +17,10 @@ import {
   maintenanceSettings,
   themeSettings,
   exchanges,
+  socialPosts,
+  socialComments,
+  socialLikes,
+  socialMutes,
   type User,
   type InsertUser,
   type Kyc,
@@ -47,6 +51,14 @@ import {
   type ThemeSettings,
   type Exchange,
   type InsertExchange,
+  type SocialPost,
+  type InsertSocialPost,
+  type SocialComment,
+  type InsertSocialComment,
+  type SocialLike,
+  type InsertSocialLike,
+  type SocialMute,
+  type InsertSocialMute,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -157,6 +169,30 @@ export interface IStorage {
   createExchange(exchange: InsertExchange): Promise<Exchange>;
   updateExchange(id: string, updates: Partial<Exchange>): Promise<Exchange | undefined>;
   deleteExchange(id: string): Promise<void>;
+
+  // Social Feed - Posts
+  getSocialPost(id: string): Promise<SocialPost | undefined>;
+  getSocialPosts(limit?: number, offset?: number): Promise<any[]>;
+  createSocialPost(post: InsertSocialPost): Promise<SocialPost>;
+  updateSocialPost(id: string, updates: Partial<SocialPost>): Promise<SocialPost | undefined>;
+  deleteSocialPost(id: string): Promise<void>;
+
+  // Social Feed - Comments
+  getSocialComment(id: string): Promise<SocialComment | undefined>;
+  getSocialCommentsByPost(postId: string): Promise<any[]>;
+  createSocialComment(comment: InsertSocialComment): Promise<SocialComment>;
+  deleteSocialComment(id: string): Promise<void>;
+
+  // Social Feed - Likes
+  getSocialLike(postId: string, userId: string): Promise<SocialLike | undefined>;
+  createSocialLike(like: InsertSocialLike): Promise<SocialLike>;
+  deleteSocialLike(postId: string, userId: string): Promise<void>;
+
+  // Social Feed - Mutes
+  getSocialMute(userId: string): Promise<SocialMute | undefined>;
+  createSocialMute(mute: InsertSocialMute): Promise<SocialMute>;
+  deleteSocialMute(userId: string): Promise<void>;
+  isUserMuted(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -702,6 +738,166 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExchange(id: string): Promise<void> {
     await db.delete(exchanges).where(eq(exchanges.id, id));
+  }
+
+  // Social Feed - Posts
+  async getSocialPost(id: string): Promise<SocialPost | undefined> {
+    const [post] = await db.select().from(socialPosts).where(eq(socialPosts.id, id));
+    return post || undefined;
+  }
+
+  async getSocialPosts(limit: number = 50, offset: number = 0): Promise<any[]> {
+    const results = await db
+      .select({
+        post: socialPosts,
+        author: users,
+        vendorProfile: vendorProfiles,
+      })
+      .from(socialPosts)
+      .innerJoin(users, eq(socialPosts.authorId, users.id))
+      .leftJoin(vendorProfiles, eq(users.id, vendorProfiles.userId))
+      .where(eq(socialPosts.isDeleted, false))
+      .orderBy(desc(socialPosts.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map((r) => ({
+      ...r.post,
+      author: {
+        id: r.author.id,
+        username: r.author.username,
+        isVerifiedVendor: r.vendorProfile?.isApproved || false,
+      },
+    }));
+  }
+
+  async createSocialPost(post: InsertSocialPost): Promise<SocialPost> {
+    const [newPost] = await db.insert(socialPosts).values(post).returning();
+    return newPost;
+  }
+
+  async updateSocialPost(id: string, updates: Partial<SocialPost>): Promise<SocialPost | undefined> {
+    const [updated] = await db
+      .update(socialPosts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(socialPosts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteSocialPost(id: string): Promise<void> {
+    await db.update(socialPosts).set({ isDeleted: true }).where(eq(socialPosts.id, id));
+  }
+
+  // Social Feed - Comments
+  async getSocialComment(id: string): Promise<SocialComment | undefined> {
+    const [comment] = await db.select().from(socialComments).where(eq(socialComments.id, id));
+    return comment || undefined;
+  }
+
+  async getSocialCommentsByPost(postId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        comment: socialComments,
+        author: users,
+        vendorProfile: vendorProfiles,
+      })
+      .from(socialComments)
+      .innerJoin(users, eq(socialComments.authorId, users.id))
+      .leftJoin(vendorProfiles, eq(users.id, vendorProfiles.userId))
+      .where(and(eq(socialComments.postId, postId), eq(socialComments.isDeleted, false)))
+      .orderBy(socialComments.createdAt);
+
+    return results.map((r) => ({
+      ...r.comment,
+      author: {
+        id: r.author.id,
+        username: r.author.username,
+        isVerifiedVendor: r.vendorProfile?.isApproved || false,
+      },
+    }));
+  }
+
+  async createSocialComment(comment: InsertSocialComment): Promise<SocialComment> {
+    const [newComment] = await db.insert(socialComments).values(comment).returning();
+    await db
+      .update(socialPosts)
+      .set({ commentsCount: sql`${socialPosts.commentsCount} + 1` })
+      .where(eq(socialPosts.id, comment.postId));
+    return newComment;
+  }
+
+  async deleteSocialComment(id: string): Promise<void> {
+    const comment = await this.getSocialComment(id);
+    if (comment) {
+      await db.update(socialComments).set({ isDeleted: true }).where(eq(socialComments.id, id));
+      await db
+        .update(socialPosts)
+        .set({ commentsCount: sql`GREATEST(${socialPosts.commentsCount} - 1, 0)` })
+        .where(eq(socialPosts.id, comment.postId));
+    }
+  }
+
+  // Social Feed - Likes
+  async getSocialLike(postId: string, userId: string): Promise<SocialLike | undefined> {
+    const [like] = await db
+      .select()
+      .from(socialLikes)
+      .where(and(eq(socialLikes.postId, postId), eq(socialLikes.userId, userId)));
+    return like || undefined;
+  }
+
+  async createSocialLike(like: InsertSocialLike): Promise<SocialLike> {
+    const existing = await this.getSocialLike(like.postId, like.userId);
+    if (existing) return existing;
+
+    const [newLike] = await db.insert(socialLikes).values(like).returning();
+    await db
+      .update(socialPosts)
+      .set({ likesCount: sql`${socialPosts.likesCount} + 1` })
+      .where(eq(socialPosts.id, like.postId));
+    return newLike;
+  }
+
+  async deleteSocialLike(postId: string, userId: string): Promise<void> {
+    const like = await this.getSocialLike(postId, userId);
+    if (like) {
+      await db
+        .delete(socialLikes)
+        .where(and(eq(socialLikes.postId, postId), eq(socialLikes.userId, userId)));
+      await db
+        .update(socialPosts)
+        .set({ likesCount: sql`GREATEST(${socialPosts.likesCount} - 1, 0)` })
+        .where(eq(socialPosts.id, postId));
+    }
+  }
+
+  // Social Feed - Mutes
+  async getSocialMute(userId: string): Promise<SocialMute | undefined> {
+    const [mute] = await db
+      .select()
+      .from(socialMutes)
+      .where(
+        and(
+          eq(socialMutes.userId, userId),
+          or(isNull(socialMutes.expiresAt), gte(socialMutes.expiresAt, new Date()))
+        )
+      );
+    return mute || undefined;
+  }
+
+  async createSocialMute(mute: InsertSocialMute): Promise<SocialMute> {
+    const [newMute] = await db.insert(socialMutes).values(mute).returning();
+    return newMute;
+  }
+
+  async deleteSocialMute(userId: string): Promise<void> {
+    await db.delete(socialMutes).where(eq(socialMutes.userId, userId));
+  }
+
+  async isUserMuted(userId: string): Promise<boolean> {
+    const mute = await this.getSocialMute(userId);
+    return !!mute;
   }
 }
 
