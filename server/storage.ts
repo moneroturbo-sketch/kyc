@@ -20,6 +20,7 @@ import {
   socialPosts,
   socialComments,
   socialLikes,
+  socialDislikes,
   socialMutes,
   type User,
   type InsertUser,
@@ -57,6 +58,8 @@ import {
   type InsertSocialComment,
   type SocialLike,
   type InsertSocialLike,
+  type SocialDislike,
+  type InsertSocialDislike,
   type SocialMute,
   type InsertSocialMute,
 } from "@shared/schema";
@@ -173,9 +176,11 @@ export interface IStorage {
   // Social Feed - Posts
   getSocialPost(id: string): Promise<SocialPost | undefined>;
   getSocialPosts(limit?: number, offset?: number): Promise<any[]>;
+  searchSocialPosts(query: string, limit?: number, offset?: number): Promise<any[]>;
   createSocialPost(post: InsertSocialPost): Promise<SocialPost>;
   updateSocialPost(id: string, updates: Partial<SocialPost>): Promise<SocialPost | undefined>;
   deleteSocialPost(id: string): Promise<void>;
+  deleteOldPosts(): Promise<number>;
 
   // Social Feed - Comments
   getSocialComment(id: string): Promise<SocialComment | undefined>;
@@ -187,6 +192,11 @@ export interface IStorage {
   getSocialLike(postId: string, userId: string): Promise<SocialLike | undefined>;
   createSocialLike(like: InsertSocialLike): Promise<SocialLike>;
   deleteSocialLike(postId: string, userId: string): Promise<void>;
+
+  // Social Feed - Dislikes
+  getSocialDislike(postId: string, userId: string): Promise<SocialDislike | undefined>;
+  createSocialDislike(dislike: InsertSocialDislike): Promise<SocialDislike>;
+  deleteSocialDislike(postId: string, userId: string): Promise<void>;
 
   // Social Feed - Mutes
   getSocialMute(userId: string): Promise<SocialMute | undefined>;
@@ -766,6 +776,7 @@ export class DatabaseStorage implements IStorage {
       author: {
         id: r.author.id,
         username: r.author.username,
+        profilePicture: r.author.profilePicture,
         isVerifiedVendor: r.vendorProfile?.isApproved || false,
       },
     }));
@@ -787,6 +798,56 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSocialPost(id: string): Promise<void> {
     await db.update(socialPosts).set({ isDeleted: true }).where(eq(socialPosts.id, id));
+  }
+
+  async searchSocialPosts(query: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+    const searchPattern = `%${query.toLowerCase()}%`;
+    const results = await db
+      .select({
+        post: socialPosts,
+        author: users,
+        vendorProfile: vendorProfiles,
+      })
+      .from(socialPosts)
+      .innerJoin(users, eq(socialPosts.authorId, users.id))
+      .leftJoin(vendorProfiles, eq(users.id, vendorProfiles.userId))
+      .where(
+        and(
+          eq(socialPosts.isDeleted, false),
+          or(
+            sql`LOWER(${socialPosts.content}) LIKE ${searchPattern}`,
+            sql`LOWER(${users.username}) LIKE ${searchPattern}`
+          )
+        )
+      )
+      .orderBy(desc(socialPosts.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map((r) => ({
+      ...r.post,
+      author: {
+        id: r.author.id,
+        username: r.author.username,
+        profilePicture: r.author.profilePicture,
+        isVerifiedVendor: r.vendorProfile?.isApproved || false,
+      },
+    }));
+  }
+
+  async deleteOldPosts(): Promise<number> {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = await db
+      .update(socialPosts)
+      .set({ isDeleted: true })
+      .where(
+        and(
+          eq(socialPosts.isDeleted, false),
+          lte(socialPosts.createdAt, twentyFourHoursAgo)
+        )
+      )
+      .returning();
+    return result.length;
   }
 
   // Social Feed - Comments
@@ -851,6 +912,9 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getSocialLike(like.postId, like.userId);
     if (existing) return existing;
 
+    // Remove dislike if exists (mutual exclusion)
+    await this.deleteSocialDislike(like.postId, like.userId);
+
     const [newLike] = await db.insert(socialLikes).values(like).returning();
     await db
       .update(socialPosts)
@@ -868,6 +932,43 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(socialPosts)
         .set({ likesCount: sql`GREATEST(${socialPosts.likesCount} - 1, 0)` })
+        .where(eq(socialPosts.id, postId));
+    }
+  }
+
+  // Social Feed - Dislikes
+  async getSocialDislike(postId: string, userId: string): Promise<SocialDislike | undefined> {
+    const [dislike] = await db
+      .select()
+      .from(socialDislikes)
+      .where(and(eq(socialDislikes.postId, postId), eq(socialDislikes.userId, userId)));
+    return dislike || undefined;
+  }
+
+  async createSocialDislike(dislike: InsertSocialDislike): Promise<SocialDislike> {
+    const existing = await this.getSocialDislike(dislike.postId, dislike.userId);
+    if (existing) return existing;
+
+    // Remove like if exists (mutual exclusion)
+    await this.deleteSocialLike(dislike.postId, dislike.userId);
+
+    const [newDislike] = await db.insert(socialDislikes).values(dislike).returning();
+    await db
+      .update(socialPosts)
+      .set({ dislikesCount: sql`${socialPosts.dislikesCount} + 1` })
+      .where(eq(socialPosts.id, dislike.postId));
+    return newDislike;
+  }
+
+  async deleteSocialDislike(postId: string, userId: string): Promise<void> {
+    const dislike = await this.getSocialDislike(postId, userId);
+    if (dislike) {
+      await db
+        .delete(socialDislikes)
+        .where(and(eq(socialDislikes.postId, postId), eq(socialDislikes.userId, userId)));
+      await db
+        .update(socialPosts)
+        .set({ dislikesCount: sql`GREATEST(${socialPosts.dislikesCount} - 1, 0)` })
         .where(eq(socialPosts.id, postId));
     }
   }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchWithAuth, isAuthenticated, getUser } from "@/lib/auth";
@@ -9,10 +10,11 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Heart,
   MessageCircle,
-  Share2,
+  ThumbsDown,
   Trash2,
   Send,
   BadgeCheck,
+  Search,
   X,
 } from "lucide-react";
 import {
@@ -25,6 +27,7 @@ import {
 interface Author {
   id: string;
   username: string;
+  profilePicture: string | null;
   isVerifiedVendor: boolean;
 }
 
@@ -33,6 +36,7 @@ interface SocialPost {
   authorId: string;
   content: string;
   likesCount: number;
+  dislikesCount: number;
   commentsCount: number;
   sharesCount: number;
   originalPostId: string | null;
@@ -66,22 +70,60 @@ function renderContentWithMentions(content: string) {
   });
 }
 
+function AuthorAvatar({ author }: { author: Author }) {
+  if (author.profilePicture) {
+    return (
+      <img
+        src={author.profilePicture}
+        alt={author.username}
+        className="w-10 h-10 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground font-bold">
+      {author.username[0].toUpperCase()}
+    </div>
+  );
+}
+
+function SmallAuthorAvatar({ author }: { author: Author }) {
+  if (author.profilePicture) {
+    return (
+      <img
+        src={author.profilePicture}
+        alt={author.username}
+        className="w-8 h-8 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold">
+      {author.username[0].toUpperCase()}
+    </div>
+  );
+}
+
 function PostCard({
   post,
   onLike,
   onUnlike,
+  onDislike,
+  onUndislike,
   onDelete,
   onComment,
-  onShare,
   isLiked,
+  isDisliked,
 }: {
   post: SocialPost;
   onLike: () => void;
   onUnlike: () => void;
+  onDislike: () => void;
+  onUndislike: () => void;
   onDelete: () => void;
   onComment: () => void;
-  onShare: () => void;
   isLiked: boolean;
+  isDisliked: boolean;
 }) {
   const user = getUser();
   const isAuthor = user?.id === post.authorId;
@@ -95,9 +137,7 @@ function PostCard({
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground font-bold">
-            {post.author.username[0].toUpperCase()}
-          </div>
+          <AuthorAvatar author={post.author} />
           <div>
             <div className="flex items-center gap-1">
               <span className="font-medium text-foreground">
@@ -151,22 +191,24 @@ function PostCard({
         </button>
 
         <button
+          className={`flex items-center gap-1.5 text-sm transition-colors ${
+            isDisliked ? "text-blue-500" : "text-muted-foreground hover:text-blue-500"
+          }`}
+          onClick={isDisliked ? onUndislike : onDislike}
+          disabled={!isAuthenticated()}
+          data-testid={`dislike-btn-${post.id}`}
+        >
+          <ThumbsDown className={`h-4 w-4 ${isDisliked ? "fill-current" : ""}`} />
+          <span>{post.dislikesCount}</span>
+        </button>
+
+        <button
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={onComment}
           data-testid={`comment-btn-${post.id}`}
         >
           <MessageCircle className="h-4 w-4" />
           <span>{post.commentsCount}</span>
-        </button>
-
-        <button
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onClick={onShare}
-          disabled={!isAuthenticated()}
-          data-testid={`share-btn-${post.id}`}
-        >
-          <Share2 className="h-4 w-4" />
-          <span>{post.sharesCount}</span>
         </button>
       </div>
     </div>
@@ -187,9 +229,7 @@ function CommentCard({
 
   return (
     <div className="flex gap-3 py-3 border-b border-border last:border-0" data-testid={`comment-${comment.id}`}>
-      <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold flex-shrink-0">
-        {comment.author.username[0].toUpperCase()}
-      </div>
+      <SmallAuthorAvatar author={comment.author} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
           <span className="font-medium text-sm text-foreground">
@@ -225,14 +265,18 @@ export default function SocialFeed() {
   const [newPost, setNewPost] = useState("");
   const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
   const [commentText, setCommentText] = useState("");
-  const [sharePost, setSharePost] = useState<SocialPost | null>(null);
-  const [quoteText, setQuoteText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
   const queryClient = useQueryClient();
 
   const { data: posts, isLoading } = useQuery<SocialPost[]>({
-    queryKey: ["socialPosts"],
+    queryKey: ["socialPosts", activeSearch],
     queryFn: async () => {
-      const res = await fetch("/api/social/posts");
+      const params = new URLSearchParams();
+      if (activeSearch) {
+        params.set("search", activeSearch);
+      }
+      const res = await fetch(`/api/social/posts?${params.toString()}`);
       return res.json();
     },
   });
@@ -248,6 +292,21 @@ export default function SocialFeed() {
         likes[post.id] = data.liked;
       }
       return likes;
+    },
+    enabled: isAuthenticated() && !!posts,
+  });
+
+  const { data: dislikedPosts } = useQuery<Record<string, boolean>>({
+    queryKey: ["dislikedPosts"],
+    queryFn: async () => {
+      if (!isAuthenticated() || !posts) return {};
+      const dislikes: Record<string, boolean> = {};
+      for (const post of posts) {
+        const res = await fetchWithAuth(`/api/social/posts/${post.id}/disliked`);
+        const data = await res.json();
+        dislikes[post.id] = data.disliked;
+      }
+      return dislikes;
     },
     enabled: isAuthenticated() && !!posts,
   });
@@ -276,8 +335,6 @@ export default function SocialFeed() {
     },
     onSuccess: () => {
       setNewPost("");
-      setSharePost(null);
-      setQuoteText("");
       queryClient.invalidateQueries({ queryKey: ["socialPosts"] });
     },
   });
@@ -320,6 +377,32 @@ export default function SocialFeed() {
     },
   });
 
+  const dislikeMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await fetchWithAuth(`/api/social/posts/${postId}/dislike`, {
+        method: "POST",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["socialPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["dislikedPosts"] });
+    },
+  });
+
+  const undislikeMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await fetchWithAuth(`/api/social/posts/${postId}/dislike`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["socialPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["dislikedPosts"] });
+    },
+  });
+
   const createCommentMutation = useMutation({
     mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
       const res = await fetchWithAuth(`/api/social/posts/${postId}/comments`, {
@@ -357,15 +440,6 @@ export default function SocialFeed() {
     createPostMutation.mutate({ content: newPost });
   };
 
-  const handleShare = () => {
-    if (!sharePost) return;
-    createPostMutation.mutate({
-      content: sharePost.content,
-      originalPostId: sharePost.id,
-      quoteText: quoteText || undefined,
-    });
-  };
-
   const handleSubmitComment = () => {
     if (!commentText.trim() || !selectedPost) return;
     createCommentMutation.mutate({
@@ -374,8 +448,52 @@ export default function SocialFeed() {
     });
   };
 
+  const handleSearch = () => {
+    setActiveSearch(searchQuery);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setActiveSearch("");
+  };
+
   return (
     <div className="space-y-4">
+      <div className="flex gap-2" data-testid="search-bar">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by username or keyword..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="pl-10 pr-10"
+            data-testid="search-input"
+          />
+          {searchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              data-testid="clear-search-btn"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Button onClick={handleSearch} data-testid="search-btn">
+          Search
+        </Button>
+      </div>
+
+      {activeSearch && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Showing results for: "{activeSearch}"</span>
+          <button onClick={handleClearSearch} className="text-primary hover:underline">
+            Clear
+          </button>
+        </div>
+      )}
+
       {isAuthenticated() && (
         <div className="bg-card border border-border rounded-lg p-4" data-testid="create-post-form">
           <Textarea
@@ -416,11 +534,13 @@ export default function SocialFeed() {
               key={post.id}
               post={post}
               isLiked={likedPosts?.[post.id] || false}
+              isDisliked={dislikedPosts?.[post.id] || false}
               onLike={() => likeMutation.mutate(post.id)}
               onUnlike={() => unlikeMutation.mutate(post.id)}
+              onDislike={() => dislikeMutation.mutate(post.id)}
+              onUndislike={() => undislikeMutation.mutate(post.id)}
               onDelete={() => deletePostMutation.mutate(post.id)}
               onComment={() => setSelectedPost(post)}
-              onShare={() => setSharePost(post)}
             />
           ))}
         </div>
@@ -442,9 +562,7 @@ export default function SocialFeed() {
             <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
               <div className="bg-muted/30 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold">
-                    {selectedPost.author.username[0].toUpperCase()}
-                  </div>
+                  <SmallAuthorAvatar author={selectedPost.author} />
                   <div className="flex items-center gap-1">
                     <span className="font-medium text-sm">
                       {selectedPost.author.username}
@@ -496,60 +614,6 @@ export default function SocialFeed() {
                   </Button>
                 </div>
               )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!sharePost} onOpenChange={() => setSharePost(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Share Post</DialogTitle>
-          </DialogHeader>
-          
-          {sharePost && (
-            <div className="space-y-4">
-              <div className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-sm">
-                    {sharePost.author.username}
-                  </span>
-                  {sharePost.author.isVerifiedVendor && (
-                    <BadgeCheck className="h-3.5 w-3.5 text-primary" />
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {sharePost.content.length > 200
-                    ? sharePost.content.slice(0, 200) + "..."
-                    : sharePost.content}
-                </p>
-              </div>
-
-              <Textarea
-                placeholder="Add your thoughts (optional)..."
-                value={quoteText}
-                onChange={(e) => setQuoteText(e.target.value)}
-                maxLength={800}
-                className="min-h-[80px] resize-none"
-                data-testid="quote-input"
-              />
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setSharePost(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleShare}
-                  disabled={createPostMutation.isPending}
-                  data-testid="confirm-share-btn"
-                >
-                  <Share2 className="h-4 w-4 mr-1" />
-                  Share
-                </Button>
-              </div>
             </div>
           )}
         </DialogContent>

@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: userRoleEnum("role").notNull().default("customer"),
+  profilePicture: text("profile_picture"),
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   twoFactorSecret: text("two_factor_secret"),
   twoFactorRecoveryCodes: text("two_factor_recovery_codes").array(),
@@ -274,6 +275,7 @@ export const socialPosts = pgTable("social_posts", {
   authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   likesCount: integer("likes_count").notNull().default(0),
+  dislikesCount: integer("dislikes_count").notNull().default(0),
   commentsCount: integer("comments_count").notNull().default(0),
   sharesCount: integer("shares_count").notNull().default(0),
   originalPostId: varchar("original_post_id").references((): any => socialPosts.id),
@@ -295,6 +297,14 @@ export const socialComments = pgTable("social_comments", {
 
 // Social Feed Likes Table
 export const socialLikes = pgTable("social_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => socialPosts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Social Feed Dislikes Table
+export const socialDislikes = pgTable("social_dislikes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   postId: varchar("post_id").notNull().references(() => socialPosts.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -679,6 +689,7 @@ export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
   createdAt: true,
   updatedAt: true,
   likesCount: true,
+  dislikesCount: true,
   commentsCount: true,
   sharesCount: true,
   isDeleted: true,
@@ -691,6 +702,11 @@ export const insertSocialCommentSchema = createInsertSchema(socialComments).omit
 });
 
 export const insertSocialLikeSchema = createInsertSchema(socialLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSocialDislikeSchema = createInsertSchema(socialDislikes).omit({
   id: true,
   createdAt: true,
 });
@@ -709,6 +725,9 @@ export type SocialComment = typeof socialComments.$inferSelect;
 
 export type InsertSocialLike = z.infer<typeof insertSocialLikeSchema>;
 export type SocialLike = typeof socialLikes.$inferSelect;
+
+export type InsertSocialDislike = z.infer<typeof insertSocialDislikeSchema>;
+export type SocialDislike = typeof socialDislikes.$inferSelect;
 
 export type InsertSocialMute = z.infer<typeof insertSocialMuteSchema>;
 export type SocialMute = typeof socialMutes.$inferSelect;

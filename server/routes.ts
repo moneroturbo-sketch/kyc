@@ -2035,7 +2035,14 @@ export async function registerRoutes(
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
-      const posts = await storage.getSocialPosts(limit, offset);
+      const search = req.query.search as string | undefined;
+      
+      let posts;
+      if (search && search.trim()) {
+        posts = await storage.searchSocialPosts(search.trim(), limit, offset);
+      } else {
+        posts = await storage.getSocialPosts(limit, offset);
+      }
       res.json(posts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2056,6 +2063,12 @@ export async function registerRoutes(
     }
   });
 
+  // Helper function to detect URLs in content
+  const containsUrl = (text: string): boolean => {
+    const urlPattern = /(?:https?:\/\/|www\.)[^\s]+|(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|io|co|app|dev|me|xyz|info|biz|us|uk|ca|au|de|fr|ru|cn|jp|kr|in|br|nl|se|no|dk|fi|ch|at|be|es|it|pl|cz|pt|ie|nz|sg|hk|tw|my|th|ph|vn|id|ae|sa|za|eg|ng|ke|gh|tn|ma|dz|ly|mu|sn|ci|cm|tz|ug|rw|et|sd|ao|mz|zw|zm|bw|na|sz|ls|mw|mg|sc|mu|re|yt|km|dj|er|so|ss|cf|cg|cd|ga|gq|st|cv|gw|sl|lr|gm|sn|ml|mr|bf|ne|td|bi|km|dj|er|so|ss|cf|cg|cd|ga|gq|st|cv|gw|sl|lr|gm|sn|ml|mr|bf|ne|td|bi)[^\s]*/gi;
+    return urlPattern.test(text);
+  };
+
   // Create post
   app.post("/api/social/posts", requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -2072,6 +2085,14 @@ export async function registerRoutes(
 
       if (content.length > 800) {
         return res.status(400).json({ message: "Post content cannot exceed 800 characters" });
+      }
+
+      if (containsUrl(content)) {
+        return res.status(400).json({ message: "URLs are not allowed in posts" });
+      }
+
+      if (quoteText && containsUrl(quoteText)) {
+        return res.status(400).json({ message: "URLs are not allowed in quote text" });
       }
 
       const post = await storage.createSocialPost({
@@ -2174,6 +2195,10 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Comment cannot exceed 500 characters" });
       }
 
+      if (containsUrl(content)) {
+        return res.status(400).json({ message: "URLs are not allowed in comments" });
+      }
+
       const comment = await storage.createSocialComment({
         postId: req.params.id,
         authorId: req.user!.userId,
@@ -2272,6 +2297,103 @@ export async function registerRoutes(
     }
   });
 
+  // Dislike a post
+  app.post("/api/social/posts/:id/dislike", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const post = await storage.getSocialPost(req.params.id);
+      if (!post || post.isDeleted) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
+      const existingDislike = await storage.getSocialDislike(req.params.id, req.user!.userId);
+      if (existingDislike) {
+        return res.json({ message: "Already disliked", disliked: true });
+      }
+
+      await storage.createSocialDislike({
+        postId: req.params.id,
+        userId: req.user!.userId,
+      });
+
+      res.json({ message: "Post disliked", disliked: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Remove dislike from a post
+  app.delete("/api/social/posts/:id/dislike", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteSocialDislike(req.params.id, req.user!.userId);
+      res.json({ message: "Dislike removed", disliked: false });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Check if user disliked a post
+  app.get("/api/social/posts/:id/disliked", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const dislike = await storage.getSocialDislike(req.params.id, req.user!.userId);
+      res.json({ disliked: !!dislike });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Auto-delete old posts (24 hours) - can be called by admin or scheduled job
+  app.post("/api/admin/social/cleanup-old-posts", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const deletedCount = await storage.deleteOldPosts();
+      res.json({ message: `Deleted ${deletedCount} old posts`, deletedCount });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Upload profile picture
+  app.post("/api/users/profile-picture", requireAuth, upload.single("profilePicture"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Only image files (JPEG, PNG, GIF, WebP) are allowed" });
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: "File size must be less than 5MB" });
+      }
+
+      const profilePictureUrl = `/uploads/${req.file.filename}`;
+      await storage.updateUser(req.user!.userId, { profilePicture: profilePictureUrl });
+
+      res.json({ message: "Profile picture updated", profilePicture: profilePictureUrl });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get user profile (includes profile picture)
+  app.get("/api/users/:id/profile", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({
+        id: user.id,
+        username: user.username,
+        profilePicture: user.profilePicture,
+        createdAt: user.createdAt,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin: Mute a user from social feed
   app.post("/api/admin/social/mute/:userId", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
@@ -2327,6 +2449,107 @@ export async function registerRoutes(
       res.json({ message: "User unmuted from social feed" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Seed social feed with test users and posts
+  app.post("/api/admin/seed-social-feed", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const results: any[] = [];
+      
+      const testUsers = [
+        { username: "CryptoTrader_Mike", email: "mike@p2p.local" },
+        { username: "BitcoinBella", email: "bella@p2p.local" },
+        { username: "EtherealEthan", email: "ethan@p2p.local" },
+        { username: "SatoshiSarah", email: "sarah@p2p.local" },
+        { username: "BlockchainBob", email: "bob@p2p.local" },
+      ];
+
+      const p2pPosts = [
+        "Just completed a smooth P2P trade for 0.5 BTC! The escrow system worked perfectly. Highly recommend this platform for secure trades.",
+        "Looking for reliable USDT sellers. I can offer competitive rates and fast bank transfers. DM me for details!",
+        "Pro tip for P2P traders: Always verify the payment before releasing crypto. Safety first!",
+        "Successfully traded ETH to local currency today. The dispute resolution team is amazing if any issues arise.",
+        "Anyone interested in bulk P2P deals? I have verified traders network. Let's connect!",
+        "New to P2P trading? Happy to guide newcomers. The community here is super helpful.",
+        "Just hit 100 completed trades milestone! Thanks to all my trading partners. Trust is everything in P2P.",
+        "Best rates for crypto-to-fiat conversions in my region. Fast settlements guaranteed.",
+        "Weekend special: Lower fees for P2P trades above 500 USDT. Limited time offer!",
+        "The escrow protection on this platform is unmatched. Never had a failed trade in 6 months.",
+      ];
+
+      const comments = [
+        "Great experience trading with you!",
+        "Smooth transaction, would trade again",
+        "Fast and reliable trader",
+        "Thanks for the quick response",
+        "Very professional, highly recommended",
+        "Best rates I've found so far",
+        "Trustworthy seller, A++ service",
+        "Quick payment confirmation, thanks!",
+        "Perfect trade, no issues at all",
+        "Will definitely trade with you again",
+      ];
+
+      const userIds: string[] = [];
+
+      // Create 5 test users
+      for (const userData of testUsers) {
+        let user = await storage.getUserByUsername(userData.username);
+        if (!user) {
+          const hashedPassword = await hashPassword("Test123!");
+          user = await storage.createUser({
+            username: userData.username,
+            email: userData.email,
+            password: hashedPassword,
+          });
+          await storage.createWallet({ userId: user.id, currency: "USDT" });
+          results.push({ action: "created_user", username: userData.username });
+        } else {
+          results.push({ action: "user_exists", username: userData.username });
+        }
+        userIds.push(user.id);
+      }
+
+      // Create 7 posts per user
+      for (let i = 0; i < userIds.length; i++) {
+        const userId = userIds[i];
+        
+        for (let j = 0; j < 7; j++) {
+          const postContent = p2pPosts[(i * 7 + j) % p2pPosts.length];
+          const post = await storage.createSocialPost({
+            authorId: userId,
+            content: postContent,
+            originalPostId: null,
+            quoteText: null,
+          });
+
+          // Add 5 likes from different users
+          for (let k = 0; k < 5; k++) {
+            const likerIndex = (i + k + 1) % userIds.length;
+            await storage.createSocialLike({
+              postId: post.id,
+              userId: userIds[likerIndex],
+            });
+          }
+
+          // Add 5 comments from different users
+          for (let k = 0; k < 5; k++) {
+            const commenterIndex = (i + k + 1) % userIds.length;
+            const commentContent = comments[(j * 5 + k) % comments.length];
+            await storage.createSocialComment({
+              postId: post.id,
+              authorId: userIds[commenterIndex],
+              content: commentContent,
+            });
+          }
+        }
+        results.push({ action: "created_posts", username: testUsers[i].username, posts: 7, likesPerPost: 5, commentsPerPost: 5 });
+      }
+
+      res.json({ message: "Social feed seeded successfully", results });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

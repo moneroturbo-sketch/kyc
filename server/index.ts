@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initializeDatabase } from "./init-db";
 import compression from "compression";
+import { storage } from "./storage";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -76,6 +77,24 @@ app.use((req, res, next) => {
 (async () => {
   await initializeDatabase();
   await registerRoutes(httpServer, app);
+
+  // Auto-delete posts older than 24 hours - run on startup and every hour
+  const cleanupOldPosts = async () => {
+    try {
+      const deletedCount = await storage.deleteOldPosts();
+      if (deletedCount > 0) {
+        log(`Auto-deleted ${deletedCount} posts older than 24 hours`);
+      }
+    } catch (error) {
+      console.error("Failed to cleanup old posts:", error);
+    }
+  };
+  
+  // Run cleanup on startup
+  await cleanupOldPosts();
+  
+  // Run cleanup every hour
+  setInterval(cleanupOldPosts, 60 * 60 * 1000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

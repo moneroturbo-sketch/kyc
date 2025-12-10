@@ -249,6 +249,53 @@ async function createTablesIfNotExist() {
       created_at TIMESTAMP NOT NULL DEFAULT now(),
       updated_at TIMESTAMP NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS social_posts (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      author_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      likes_count INTEGER NOT NULL DEFAULT 0,
+      dislikes_count INTEGER NOT NULL DEFAULT 0,
+      comments_count INTEGER NOT NULL DEFAULT 0,
+      shares_count INTEGER NOT NULL DEFAULT 0,
+      original_post_id VARCHAR REFERENCES social_posts(id),
+      quote_text TEXT,
+      is_deleted BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP NOT NULL DEFAULT now(),
+      updated_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS social_comments (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      post_id VARCHAR NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+      author_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      is_deleted BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS social_likes (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      post_id VARCHAR NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+      user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS social_dislikes (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      post_id VARCHAR NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+      user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS social_mutes (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      muted_by VARCHAR NOT NULL REFERENCES users(id),
+      reason TEXT,
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
   `);
 }
 
@@ -292,6 +339,16 @@ async function createIndexesIfNotExist() {
     `CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_exchanges_is_active ON exchanges(is_active);`,
     `CREATE INDEX IF NOT EXISTS idx_exchanges_sort_order ON exchanges(sort_order);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_posts_author_id ON social_posts(author_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_posts_created_at ON social_posts(created_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_posts_is_deleted ON social_posts(is_deleted);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_comments_post_id ON social_comments(post_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_comments_author_id ON social_comments(author_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_likes_post_id ON social_likes(post_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_likes_user_id ON social_likes(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_dislikes_post_id ON social_dislikes(post_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_dislikes_user_id ON social_dislikes(user_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_social_mutes_user_id ON social_mutes(user_id);`,
   ];
 
   for (const query of indexQueries) {
