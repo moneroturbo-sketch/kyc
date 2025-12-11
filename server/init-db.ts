@@ -17,6 +17,7 @@ async function createEnumsIfNotExist() {
     `DO $$ BEGIN CREATE TYPE maintenance_mode AS ENUM ('none', 'partial', 'full'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE loader_order_status AS ENUM ('created', 'awaiting_liability_confirmation', 'funds_sent_by_loader', 'asset_frozen_waiting', 'completed', 'closed_no_payment', 'dispute_resolved', 'cancelled'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE liability_type AS ENUM ('full_payment', 'partial_10', 'partial_25', 'partial_50', 'time_bound_24h', 'time_bound_48h', 'time_bound_72h', 'time_bound_1week', 'time_bound_1month'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN CREATE TYPE countdown_time AS ENUM ('15min', '30min', '1hr', '2hr', '4hr', '24hr'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
   ];
 
   for (const query of enumQueries) {
@@ -307,7 +308,7 @@ async function createTablesIfNotExist() {
       deal_amount NUMERIC(18, 2) NOT NULL,
       loading_terms TEXT,
       upfront_percentage INTEGER DEFAULT 0,
-      countdown_time VARCHAR(10) DEFAULT '30min',
+      countdown_time countdown_time NOT NULL DEFAULT '30min',
       payment_methods TEXT[] NOT NULL,
       frozen_commitment NUMERIC(18, 2) NOT NULL,
       loader_fee_reserve DECIMAL(20, 8) DEFAULT '0',
@@ -327,6 +328,10 @@ async function createTablesIfNotExist() {
       receiver_frozen_amount NUMERIC(18, 2) DEFAULT 0,
       receiver_fee_reserve DECIMAL(20, 8) DEFAULT '0',
       status loader_order_status NOT NULL DEFAULT 'created',
+      countdown_time countdown_time NOT NULL DEFAULT '30min',
+      countdown_expires_at TIMESTAMP,
+      countdown_stopped BOOLEAN NOT NULL DEFAULT false,
+      loader_sent_payment_details BOOLEAN NOT NULL DEFAULT false,
       liability_type liability_type,
       liability_deadline TIMESTAMP,
       receiver_confirmed BOOLEAN NOT NULL DEFAULT false,
@@ -352,10 +357,13 @@ async function createTablesIfNotExist() {
 async function runMigrations() {
   const migrations = [
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture TEXT;`,
-    `ALTER TABLE loader_ads ADD COLUMN IF NOT EXISTS countdown_time VARCHAR(10) DEFAULT '30min';`,
     `ALTER TABLE loader_ads ADD COLUMN IF NOT EXISTS loader_fee_reserve DECIMAL(20, 8) DEFAULT '0';`,
     `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS loader_fee_reserve DECIMAL(20, 8) DEFAULT '0';`,
     `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS receiver_fee_reserve DECIMAL(20, 8) DEFAULT '0';`,
+    `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS countdown_time countdown_time NOT NULL DEFAULT '30min';`,
+    `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS countdown_expires_at TIMESTAMP;`,
+    `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS countdown_stopped BOOLEAN NOT NULL DEFAULT false;`,
+    `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS loader_sent_payment_details BOOLEAN NOT NULL DEFAULT false;`,
   ];
 
   for (const migration of migrations) {
