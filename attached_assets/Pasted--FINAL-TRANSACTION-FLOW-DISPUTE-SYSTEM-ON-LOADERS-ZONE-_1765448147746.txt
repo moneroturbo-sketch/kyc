@@ -1,0 +1,296 @@
+⭐ FINAL TRANSACTION FLOW + DISPUTE SYSTEM ON LOADERS ZONE
+all plaform fee goes to admin wallet
+on loader page when posting ads lets add countdown where he will swlwct the one he prefered
+ Countdown Time: 15 min / 30 min / 1 hr / 2 hrs
+
+ lets update receiver fee , receiver needs to pay 2% fee 
+ it will be like upfront requred by the loader plus 2% of the deal amount as plaftorm fee
+
+🟨 3. ORDER CHAT + COUNTDOWN
+
+Countdown runs until:
+
+Loader clicks “I have sent payment instructions”
+
+OR
+
+Receiver clicks “I have sent payment details”
+
+
+👉 Once either is clicked → COUNTDOWN STOPS PERMANENTLY
+Deal now waits for completion.
+
+
+---
+
+🟫 4. AUTO-CANCEL (NO-FAULT) BEFORE DETAILS ARE SENT
+
+If countdown expires BEFORE either party sends payment details:
+
+✔ Auto-cancel
+✔ No penalty to anyone
+
+Refunds:
+
+Party	Refund
+
+Loader	10% collateral + 3% fee reserve
+Receiver	Upfront + 2% fee reserve
+
+
+Ad returns to active status.
+
+
+---
+
+🟩 5. PAYMENT PHASE (AFTER DETAILS SENT)
+
+Once payment details are exchanged:
+
+Loader sends payment off-platform
+
+Receiver confirms when funds arrive
+
+No auto-cancel anymore
+
+Only MANUAL cancel or DISPUTE can occur
+
+
+
+---
+
+🟦 6. SUCCESSFUL COMPLETION
+
+When both confirm:
+
+Loader pays 3% (deducted from collateral)
+
+Receiver pays 2% (deducted from upfront or frozen funds) 
+
+Upfront → transferred to Loader wallet
+
+Loader collateral returned minus 3% fee
+
+Receiver balance becomes normal
+
+
+Order marked completed.
+
+
+---
+
+🟥 7. MANUAL CANCELLATION (PENALTY: 5%)
+whe he clicck cancle button he will be prompted with this then he proceds
+
+Warning: Canceling This Deal Will Cost You 5% Penalty
+
+You are about to cancel an active transaction.
+
+Canceling a deal results in a 5% penalty of the total deal amount.
+
+This amount will be deducted from your frozen funds or balance.
+
+Only proceed if you fully understand the consequences.
+
+Do you want to continue?
+
+[Yes, Cancel Deal] - [Go Back]
+
+If user clicks "Yes"
+
+cancellation proceeds
+
+If user clicks "Go Back" → nothin~ happens
+
+
+Whoever presses CANCEL DEAL pays the 5% penalty.
+
+A) Loader Cancels Manually
+
+Loader pays 5% penalty (deducted from 10% collateral)
+
+Receiver refund = 100% upfront + 100% 2% fee
+
+Ad is removed by the system
+
+
+B) Receiver Cancels Manually
+
+Receiver pays 5% penalty
+
+If upfront > 5% = 5% of the deal amonunt → deducted from upfront
+
+If upfront = 0 → balance becomes –5% or deducted from available balance ,remains nagative until the the user deposited money where he will be diducted until the debt is settle ,negative should be on availabele balances not escrow wallet
+
+
+Loader refunded = full collateral + full 3% fee
+
+Ad removed
+
+
+Receiver CANNOT Cancel After Receiving Funds
+
+Once payment details are exchanged and loader clicks "Payment Sent", the receiver must NOT be allowed to press "Cancel Deal".
+
+
+After loader clicks "Payment Sent":
+
+Receiver's Cancel button disappears
+
+Receiver cannot cancel the deal
+
+X Only "Confirm Payment Received" or "Open Dispute" remain
+
+---
+
+🟦 8. DISPUTE SYSTEM (NEW & FINAL)
+
+If ANYTHING goes wrong after payment details have been exchanged:
+
+Either user can click “Open Dispute”.
+
+
+---
+
+⭐ 8A. OPENING A DISPUTE
+
+When a user opens dispute:
+
+1. System asks “Select reason for dispute”
+(Examples: Payment not received, Proof unclear, User unresponsive, Wrong amount sent, Wallet issue, etc.)
+
+
+2. Order is immediately frozen:
+
+No cancel button
+
+No confirm payment
+
+No edit upfront
+
+No timer
+
+
+
+3. Both users enter Dispute Chat
+
+
+
+
+---
+
+⭐ 8B. DISPUTE CHAT RULES
+
+Shows real names of sender
+
+Shows verified Dispute Admin Badge for support messages
+
+Users cannot fake admin chats
+
+Admin sees full chat logs, timestamps, actions, proofs
+
+
+
+---
+
+⭐ 8C. DISPUTE ADMIN RESPONSIBILITY
+
+Admin reviews:
+
+Payment proof
+
+Wallet screenshots
+
+Chat logs
+
+Timestamps
+
+Agreed terms
+
+Payment instructions
+
+Whether either user caused harm or delay
+
+
+After review, admin chooses:
+
+✔ Loader wins
+or
+✔ Receiver wins
+
+
+---
+
+⭐ 8D. DISPUTE PENALTY RULE
+
+Whoever LOSES the dispute pays the 5% cancellation fee.
+
+Same as manual cancellation, but applied by admin decision.
+
+If Loader loses:
+
+5% deducted from his collateral
+
+Receiver gets full refund + 2% fee + upfront if applicable
+
+
+If Receiver loses:
+
+5% deducted from upfront
+
+Loader receives upfront and refunded collateral
+
+If upfront = 0 → receiver balance becomes –5%
+
+
+
+---
+
+⭐ 8E. DISPUTE CLOSE — FINAL ACTION
+
+Admin marks the dispute as:
+
+Resolved — Loader Wins
+or
+
+Resolved — Receiver Wins
+
+
+Then system performs:
+
+✔ Penalty to loser
+✔ Refund to winner
+✔ Order marked “Cancelled by Dispute”
+
+
+---
+
+⭐ 9. SPECIAL EDGE CASES
+
+
+---
+
+🟣 If both parties ask for dispute at same time
+
+→ Single dispute opens
+→ Admin resolves normally
+
+
+---
+
+🟣 If admin cannot verify evidence
+
+Admin chooses “Mutual Fault → No Penalty”
+
+In this case:
+
+Both refunded
+
+No 5% penalty
+
+Order closed
+
+
+(This protects users from ambiguous disputes.)
+
+
