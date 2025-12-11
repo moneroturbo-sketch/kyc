@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { fetchWithAuth, getUser, isAuthenticated } from "@/lib/auth";
@@ -19,9 +17,11 @@ import {
   CheckCircle2,
   Clock,
   Shield,
-  Lock,
+  XCircle,
   Loader2,
   MessageCircle,
+  Flag,
+  AlertCircle,
 } from "lucide-react";
 
 interface LoaderOrder {
@@ -33,12 +33,18 @@ interface LoaderOrder {
   receiverUsername?: string;
   dealAmount: string;
   loaderFrozenAmount: string;
+  loaderFeeReserve?: string;
   receiverFrozenAmount: string;
+  receiverFeeReserve?: string;
   status: string;
-  liabilityType: string | null;
-  liabilityDeadline: string | null;
-  receiverConfirmed: boolean;
-  loaderConfirmed: boolean;
+  countdownTime?: string;
+  countdownExpiresAt?: string;
+  countdownStopped?: boolean;
+  loaderSentPaymentDetails?: boolean;
+  receiverSentPaymentDetails?: boolean;
+  loaderMarkedPaymentSent?: boolean;
+  penaltyAmount?: string;
+  penaltyPaidBy?: string;
   createdAt: string;
   ad?: {
     assetType: string;
@@ -53,40 +59,20 @@ interface Message {
   senderId: string | null;
   senderUsername?: string;
   isSystem: boolean;
+  isAdminMessage?: boolean;
   content: string;
   createdAt: string;
 }
 
-const LIABILITY_OPTIONS = [
-  {
-    value: "full_payment",
-    label: "Full Payment",
-    description: "I will pay the full deal amount even if the assets are frozen, delayed, or unusable.",
-  },
-  {
-    value: "partial_10",
-    label: "Partial Payment - 10%",
-    description: "If the assets are frozen or unusable, I agree to pay 10% of the deal amount.",
-  },
-  {
-    value: "partial_25",
-    label: "Partial Payment - 25%",
-    description: "If the assets are frozen or unusable, I agree to pay 25% of the deal amount.",
-  },
-  {
-    value: "partial_50",
-    label: "Partial Payment - 50%",
-    description: "If the assets are frozen or unusable, I agree to pay 50% of the deal amount.",
-  },
-];
-
-const TIME_BOUND_OPTIONS = [
-  { value: "time_bound_24h", label: "24 hours" },
-  { value: "time_bound_48h", label: "48 hours" },
-  { value: "time_bound_72h", label: "72 hours" },
-  { value: "time_bound_1week", label: "1 week" },
-  { value: "time_bound_1month", label: "1 month" },
-];
+interface Dispute {
+  id: string;
+  orderId: string;
+  openedBy: string;
+  reason: string;
+  status: string;
+  resolution?: string;
+  createdAt: string;
+}
 
 export default function LoaderOrderPage() {
   const [, params] = useRoute("/loader-order/:id");
@@ -96,10 +82,11 @@ export default function LoaderOrderPage() {
   const queryClient = useQueryClient();
   const currentUser = getUser();
 
-  const [selectedLiability, setSelectedLiability] = useState("");
-  const [selectedTimeBound, setSelectedTimeBound] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [disputeReason, setDisputeReason] = useState("");
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   const { data: order, isLoading } = useQuery<LoaderOrder>({
     queryKey: ["loaderOrder", orderId],
@@ -122,12 +109,38 @@ export default function LoaderOrderPage() {
     refetchInterval: 5000,
   });
 
-  const selectLiabilityMutation = useMutation({
+  const { data: dispute } = useQuery<Dispute>({
+    queryKey: ["loaderDispute", orderId],
+    queryFn: async () => {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/dispute`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!orderId && order?.status === "disputed",
+  });
+
+  useEffect(() => {
+    if (!order?.countdownExpiresAt || order.countdownStopped) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const expiresAt = new Date(order.countdownExpiresAt!).getTime();
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
+      setTimeRemaining(remaining);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [order?.countdownExpiresAt, order?.countdownStopped]);
+
+  const sendPaymentDetailsMutation = useMutation({
     mutationFn: async () => {
-      const liabilityType = selectedTimeBound || selectedLiability;
-      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/liability`, {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/send-payment-details`, {
         method: "POST",
-        body: JSON.stringify({ liabilityType, confirmed }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -136,7 +149,7 @@ export default function LoaderOrderPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Liability terms selected" });
+      toast({ title: "Success", description: "Payment details sent. Countdown stopped." });
       queryClient.invalidateQueries({ queryKey: ["loaderOrder", orderId] });
       refetchMessages();
     },
@@ -145,9 +158,9 @@ export default function LoaderOrderPage() {
     },
   });
 
-  const confirmLiabilityMutation = useMutation({
+  const markPaymentSentMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/confirm-liability`, {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/mark-payment-sent`, {
         method: "POST",
       });
       if (!res.ok) {
@@ -157,7 +170,7 @@ export default function LoaderOrderPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Liability terms confirmed. You can now send funds." });
+      toast({ title: "Success", description: "Payment marked as sent." });
       queryClient.invalidateQueries({ queryKey: ["loaderOrder", orderId] });
       refetchMessages();
     },
@@ -178,10 +191,57 @@ export default function LoaderOrderPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Order completed! Funds released." });
+      toast({ title: "Success", description: "Order completed! Fees deducted and funds released." });
       queryClient.invalidateQueries({ queryKey: ["loaderOrder", orderId] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
       refetchMessages();
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/cancel`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Order Cancelled", description: "5% penalty has been deducted." });
+      queryClient.invalidateQueries({ queryKey: ["loaderOrder", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      refetchMessages();
+      setShowCancelConfirm(false);
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const openDisputeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/dispute`, {
+        method: "POST",
+        body: JSON.stringify({ reason: disputeReason }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Dispute Opened", description: "Admin will review and resolve." });
+      queryClient.invalidateQueries({ queryKey: ["loaderOrder", orderId] });
+      refetchMessages();
+      setShowDisputeForm(false);
+      setDisputeReason("");
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -206,19 +266,35 @@ export default function LoaderOrderPage() {
   const isReceiver = order?.receiverId === currentUser?.id;
   const isLoader = order?.loaderId === currentUser?.id;
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      created: { label: "Created", variant: "secondary" },
-      awaiting_liability_confirmation: { label: "Awaiting Terms", variant: "outline" },
-      funds_sent_by_loader: { label: "Funds Sent", variant: "default" },
-      asset_frozen_waiting: { label: "Asset Frozen", variant: "destructive" },
+      awaiting_payment_details: { label: "Awaiting Details", variant: "outline" },
+      payment_details_sent: { label: "Details Sent", variant: "default" },
+      payment_sent: { label: "Payment Sent", variant: "default" },
       completed: { label: "Completed", variant: "default" },
-      closed_no_payment: { label: "Closed", variant: "secondary" },
-      cancelled: { label: "Cancelled", variant: "secondary" },
+      cancelled_auto: { label: "Auto-Cancelled", variant: "secondary" },
+      cancelled_loader: { label: "Cancelled by Loader", variant: "destructive" },
+      cancelled_receiver: { label: "Cancelled by Receiver", variant: "destructive" },
+      disputed: { label: "Disputed", variant: "destructive" },
+      resolved_loader_wins: { label: "Resolved - Loader Wins", variant: "default" },
+      resolved_receiver_wins: { label: "Resolved - Receiver Wins", variant: "default" },
+      resolved_mutual: { label: "Resolved - Mutual", variant: "secondary" },
     };
-    const s = statusMap[status] || { label: status, variant: "secondary" as const };
+    const s = statusMap[status] || { label: status.replace(/_/g, " "), variant: "secondary" as const };
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
+
+  const dealAmount = parseFloat(order?.dealAmount || "0");
+  const penaltyAmount = dealAmount * 0.05;
+
+  const canCancel = order && !["completed", "cancelled_auto", "cancelled_loader", "cancelled_receiver", "disputed", "resolved_loader_wins", "resolved_receiver_wins", "resolved_mutual"].includes(order.status);
+  const canDispute = order && ["payment_details_sent", "payment_sent"].includes(order.status);
 
   if (isLoading) {
     return (
@@ -260,6 +336,30 @@ export default function LoaderOrderPage() {
           {getStatusBadge(order.status)}
         </div>
 
+        {timeRemaining !== null && timeRemaining > 0 && !order.countdownStopped && (
+          <Card className={`mb-4 ${timeRemaining < 60 ? "border-destructive/50 bg-destructive/5" : "border-amber-500/50 bg-amber-500/5"}`}>
+            <CardContent className="py-4 text-center">
+              <Clock className={`h-8 w-8 mx-auto mb-2 ${timeRemaining < 60 ? "text-destructive" : "text-amber-600"}`} />
+              <p className={`text-2xl font-bold ${timeRemaining < 60 ? "text-destructive" : "text-amber-600"}`}>
+                {formatTime(timeRemaining)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Time remaining to send payment details
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {order.countdownStopped && order.status === "payment_details_sent" && (
+          <Card className="mb-4 border-green-500/50 bg-green-500/5">
+            <CardContent className="py-4 text-center">
+              <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <p className="font-semibold text-green-600">Payment Details Exchanged</p>
+              <p className="text-sm text-muted-foreground">Countdown stopped. Proceed with the transaction.</p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="mb-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Deal Details</CardTitle>
@@ -272,7 +372,7 @@ export default function LoaderOrderPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Deal Amount</p>
-                <p className="font-medium">${parseFloat(order.dealAmount).toLocaleString()}</p>
+                <p className="font-medium">${dealAmount.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Loader</p>
@@ -282,142 +382,88 @@ export default function LoaderOrderPage() {
                 <p className="text-xs text-muted-foreground">Receiver</p>
                 <p className="font-medium">{order.receiverUsername}</p>
               </div>
-            </div>
-            {order.liabilityType && (
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground">Liability Terms</p>
-                <p className="font-medium">{order.liabilityType.replace(/_/g, " ")}</p>
-                {order.liabilityDeadline && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Deadline: {new Date(order.liabilityDeadline).toLocaleString()}
-                  </p>
-                )}
+              <div>
+                <p className="text-xs text-muted-foreground">Loader Fee</p>
+                <p className="font-medium">3% (${(dealAmount * 0.03).toFixed(2)})</p>
               </div>
-            )}
+              <div>
+                <p className="text-xs text-muted-foreground">Receiver Fee</p>
+                <p className="font-medium">2% (${(dealAmount * 0.02).toFixed(2)})</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {order.status === "awaiting_liability_confirmation" && isReceiver && !order.receiverConfirmed && (
-          <Card className="mb-4 border-amber-500/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2 text-amber-600">
-                <AlertTriangle className="h-5 w-5" />
-                Select Liability Terms
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                You must select liability terms before the loader sends funds.
-              </p>
-
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Payment Options:</Label>
-                <RadioGroup value={selectedLiability} onValueChange={(v) => { setSelectedLiability(v); setSelectedTimeBound(""); }}>
-                  {LIABILITY_OPTIONS.map((option) => (
-                    <div key={option.value} className="flex items-start space-x-3 p-3 border rounded-lg">
-                      <RadioGroupItem value={option.value} id={option.value} data-testid={`radio-${option.value}`} />
-                      <div className="flex-1">
-                        <Label htmlFor={option.value} className="font-medium cursor-pointer">
-                          {option.label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">{option.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Or Time-Bound Option:</Label>
-                <p className="text-xs text-muted-foreground">
-                  If assets are usable before deadline, pay in full. If still frozen at deadline, deal closes with no payment.
-                </p>
-                <RadioGroup value={selectedTimeBound} onValueChange={(v) => { setSelectedTimeBound(v); setSelectedLiability(""); }}>
-                  <div className="flex flex-wrap gap-2">
-                    {TIME_BOUND_OPTIONS.map((option) => (
-                      <div key={option.value} className="flex items-center space-x-2 p-2 border rounded-lg">
-                        <RadioGroupItem value={option.value} id={option.value} data-testid={`radio-${option.value}`} />
-                        <Label htmlFor={option.value} className="text-sm cursor-pointer">{option.label}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
-                <div className="flex items-start space-x-2">
-                  <Checkbox 
-                    id="confirm" 
-                    checked={confirmed} 
-                    onCheckedChange={(c) => setConfirmed(c === true)}
-                    data-testid="checkbox-confirm"
-                  />
-                  <Label htmlFor="confirm" className="text-sm text-destructive cursor-pointer">
-                    I understand this decision is final and cannot be changed later.
-                  </Label>
-                </div>
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={() => selectLiabilityMutation.mutate()}
-                disabled={(!selectedLiability && !selectedTimeBound) || !confirmed || selectLiabilityMutation.isPending}
-                data-testid="button-submit-liability"
-              >
-                {selectLiabilityMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                )}
-                I Agree - Submit Terms
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {order.status === "awaiting_liability_confirmation" && isLoader && order.receiverConfirmed && !order.loaderConfirmed && (
+        {order.status === "awaiting_payment_details" && (
           <Card className="mb-4 border-primary/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" />
-                Confirm Liability Terms
+                <Send className="h-5 w-5 text-primary" />
+                Send Payment Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                The receiver has selected: <strong>{order.liabilityType?.replace(/_/g, " ")}</strong>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Confirm to lock these terms and proceed with sending funds.
+                Either party must send payment details before the countdown expires to continue the deal.
               </p>
               <Button
                 className="w-full"
-                onClick={() => confirmLiabilityMutation.mutate()}
-                disabled={confirmLiabilityMutation.isPending}
-                data-testid="button-confirm-liability"
+                onClick={() => sendPaymentDetailsMutation.mutate()}
+                disabled={sendPaymentDetailsMutation.isPending}
+                data-testid="button-send-payment-details"
               >
-                {confirmLiabilityMutation.isPending ? (
+                {sendPaymentDetailsMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  <Send className="h-4 w-4 mr-2" />
                 )}
-                Confirm and Proceed
+                I've Sent Payment Details in Chat
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {order.status === "funds_sent_by_loader" && isReceiver && (
+        {order.status === "payment_details_sent" && isLoader && !order.loaderMarkedPaymentSent && (
+          <Card className="mb-4 border-primary/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Mark Payment Sent
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Once you've sent the payment to the receiver, click below to notify them.
+              </p>
+              <Button
+                className="w-full"
+                onClick={() => markPaymentSentMutation.mutate()}
+                disabled={markPaymentSentMutation.isPending}
+                data-testid="button-mark-payment-sent"
+              >
+                {markPaymentSentMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                )}
+                I've Sent the Payment
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {(order.status === "payment_sent" || (order.status === "payment_details_sent" && order.loaderMarkedPaymentSent)) && isReceiver && (
           <Card className="mb-4 border-green-500/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-5 w-5" />
-                Confirm Receipt
+                Confirm Payment Received
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Once you confirm receipt and the assets are usable, click below to complete the order.
+                Once you've received the payment and verified it, click below to complete the order.
+                Your 2% fee (${(dealAmount * 0.02).toFixed(2)}) will be deducted.
               </p>
               <Button
                 className="w-full bg-green-600 hover:bg-green-700"
@@ -430,7 +476,7 @@ export default function LoaderOrderPage() {
                 ) : (
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                 )}
-                Mark as Complete
+                Confirm Payment Received - Complete Order
               </Button>
             </CardContent>
           </Card>
@@ -441,7 +487,154 @@ export default function LoaderOrderPage() {
             <CardContent className="py-6 text-center">
               <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-2" />
               <p className="font-semibold text-green-600">Order Completed</p>
-              <p className="text-sm text-muted-foreground">Funds have been released successfully.</p>
+              <p className="text-sm text-muted-foreground">Fees deducted and funds released successfully.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {order.status === "disputed" && (
+          <Card className="mb-4 border-destructive/50 bg-destructive/5">
+            <CardContent className="py-6 text-center">
+              <Flag className="h-12 w-12 text-destructive mx-auto mb-2" />
+              <p className="font-semibold text-destructive">Order Disputed</p>
+              <p className="text-sm text-muted-foreground">Admin is reviewing. The losing party will pay a 5% penalty.</p>
+              {dispute && (
+                <div className="mt-4 text-left p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">Reason:</p>
+                  <p className="text-sm">{dispute.reason}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {(order.status.startsWith("cancelled_") || order.status.startsWith("resolved_")) && (
+          <Card className="mb-4 border-muted bg-muted/20">
+            <CardContent className="py-6 text-center">
+              <XCircle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+              <p className="font-semibold text-muted-foreground">{order.status.replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase())}</p>
+              {order.penaltyAmount && parseFloat(order.penaltyAmount) > 0 && (
+                <p className="text-sm text-destructive mt-2">
+                  5% penalty (${parseFloat(order.penaltyAmount).toFixed(2)}) was applied.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {canCancel && !showCancelConfirm && (
+          <Card className="mb-4">
+            <CardContent className="py-4 flex gap-3">
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => setShowCancelConfirm(true)}
+                data-testid="button-cancel-order"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancel Order
+              </Button>
+              {canDispute && (
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDisputeForm(true)}
+                  data-testid="button-open-dispute"
+                >
+                  <Flag className="h-4 w-4 mr-2" />
+                  Open Dispute
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {showCancelConfirm && (
+          <Card className="mb-4 border-destructive/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Confirm Cancellation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 bg-destructive/10 rounded-lg">
+                <p className="text-sm text-destructive font-medium">
+                  Warning: You will be charged a 5% penalty (${penaltyAmount.toFixed(2)}) for cancelling.
+                </p>
+                <p className="text-xs text-destructive mt-1">
+                  The other party will receive a full refund.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => cancelMutation.mutate()}
+                  disabled={cancelMutation.isPending}
+                  data-testid="button-confirm-cancel"
+                >
+                  {cancelMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <XCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Yes, Cancel and Pay Penalty
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowCancelConfirm(false)}
+                  data-testid="button-nevermind"
+                >
+                  Never Mind
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {showDisputeForm && (
+          <Card className="mb-4 border-amber-500/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2 text-amber-600">
+                <Flag className="h-5 w-5" />
+                Open Dispute
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Explain why you're opening a dispute. Admin will review and the losing party will pay a 5% penalty.
+              </p>
+              <Textarea
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                placeholder="Describe the issue..."
+                data-testid="input-dispute-reason"
+              />
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1"
+                  onClick={() => openDisputeMutation.mutate()}
+                  disabled={!disputeReason || openDisputeMutation.isPending}
+                  data-testid="button-submit-dispute"
+                >
+                  {openDisputeMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Flag className="h-4 w-4 mr-2" />
+                  )}
+                  Submit Dispute
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setShowDisputeForm(false); setDisputeReason(""); }}
+                  data-testid="button-cancel-dispute"
+                >
+                  Cancel
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -461,7 +654,8 @@ export default function LoaderOrderPage() {
                   className={`mb-3 ${msg.isSystem ? "text-center" : msg.senderId === currentUser?.id ? "text-right" : ""}`}
                 >
                   {msg.isSystem ? (
-                    <div className="inline-block px-3 py-2 bg-muted rounded-lg text-sm text-muted-foreground">
+                    <div className={`inline-block px-3 py-2 rounded-lg text-sm ${msg.isAdminMessage ? "bg-amber-500/20 text-amber-700" : "bg-muted text-muted-foreground"}`}>
+                      {msg.isAdminMessage && <AlertCircle className="h-3 w-3 inline mr-1" />}
                       {msg.content}
                     </div>
                   ) : (
