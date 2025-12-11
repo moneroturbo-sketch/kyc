@@ -358,6 +358,7 @@ async function createTablesIfNotExist() {
       order_id VARCHAR NOT NULL REFERENCES loader_orders(id) ON DELETE CASCADE,
       sender_id VARCHAR REFERENCES users(id),
       is_system BOOLEAN NOT NULL DEFAULT false,
+      is_admin_message BOOLEAN NOT NULL DEFAULT false,
       content TEXT NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT now()
     );
@@ -384,6 +385,7 @@ async function runMigrations() {
     `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`,
     `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS penalty_amount NUMERIC(18, 2) DEFAULT 0;`,
     `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS penalty_paid_by VARCHAR;`,
+    `ALTER TABLE loader_order_messages ADD COLUMN IF NOT EXISTS is_admin_message BOOLEAN NOT NULL DEFAULT false;`,
   ];
 
   for (const migration of migrations) {
