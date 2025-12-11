@@ -610,8 +610,10 @@ export class DatabaseStorage implements IStorage {
   async releaseEscrow(walletId: string, amount: string): Promise<void> {
     const wallet = await this.getWallet(walletId);
     if (wallet) {
-      const newEscrow = (parseFloat(wallet.escrowBalance) - parseFloat(amount)).toFixed(8);
-      await this.updateWalletBalance(walletId, wallet.availableBalance, newEscrow);
+      const releaseAmount = parseFloat(amount);
+      const newAvailable = (parseFloat(wallet.availableBalance) + releaseAmount).toFixed(8);
+      const newEscrow = (parseFloat(wallet.escrowBalance) - releaseAmount).toFixed(8);
+      await this.updateWalletBalance(walletId, newAvailable, newEscrow);
     }
   }
 
