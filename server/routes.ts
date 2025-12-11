@@ -3025,45 +3025,45 @@ export async function registerRoutes(
         // Remove the ad
         await storage.deactivateLoaderAd(order.adId);
       } else {
-        // Receiver cancels: pays 5% penalty
+        // Receiver cancels: pays 5% penalty from their escrowed funds
         const receiverWallet = await storage.getWalletByUserId(order.receiverId);
         const receiverUpfront = parseFloat(order.receiverFrozenAmount || "0");
         const receiverFeeReserve = parseFloat(order.receiverFeeReserve || "0");
         const receiverTotal = receiverUpfront + receiverFeeReserve;
         
         if (receiverWallet) {
-          let actualPenalty = penaltyAmount;
-          let receiverRefund = receiverTotal - penaltyAmount;
+          // Calculate refund: escrow minus 5% penalty
+          const actualPenalty = Math.min(penaltyAmount, receiverTotal);
+          const receiverRefund = receiverTotal - actualPenalty;
           
-          // If upfront doesn't cover penalty, balance goes negative
-          if (receiverRefund < 0) {
-            actualPenalty = receiverTotal;
-            const deficit = penaltyAmount - receiverTotal;
-            const newAvailable = (parseFloat(receiverWallet.availableBalance) - deficit).toFixed(2);
-            await storage.updateWalletBalance(receiverWallet.id, newAvailable, receiverWallet.escrowBalance);
-            receiverRefund = 0;
-          }
+          // Move funds from escrow to available (minus penalty)
+          const currentAvailable = parseFloat(receiverWallet.availableBalance);
+          const currentEscrow = parseFloat(receiverWallet.escrowBalance);
+          const newAvailable = (currentAvailable + receiverRefund).toFixed(8);
+          const newEscrow = (currentEscrow - receiverTotal).toFixed(8);
           
-          if (receiverTotal > 0) {
-            if (receiverRefund > 0) {
-              await storage.releaseEscrow(receiverWallet.id, receiverTotal.toString());
-              const newBalance = (parseFloat(receiverWallet.availableBalance) - actualPenalty).toFixed(2);
-              await storage.updateWalletBalance(receiverWallet.id, newBalance, receiverWallet.escrowBalance);
-            } else {
-              // Release escrow fully, deficit already deducted from available
-              await storage.releaseEscrow(receiverWallet.id, receiverTotal.toString());
-            }
+          await storage.updateWalletBalance(receiverWallet.id, newAvailable, newEscrow);
+          
+          if (receiverRefund > 0) {
+            await storage.createTransaction({
+              userId: order.receiverId,
+              walletId: receiverWallet.id,
+              type: "refund",
+              amount: receiverRefund.toString(),
+              currency: "USDT",
+              description: `Refund minus 5% penalty - receiver cancelled order ${order.id}`,
+            });
           }
           
           // Transfer penalty to admin
-          if (adminWallet) {
-            const newAdminBalance = (parseFloat(adminWallet.availableBalance) + penaltyAmount).toFixed(2);
+          if (adminWallet && actualPenalty > 0) {
+            const newAdminBalance = (parseFloat(adminWallet.availableBalance) + actualPenalty).toFixed(8);
             await storage.updateWalletBalance(adminWallet.id, newAdminBalance, adminWallet.escrowBalance);
             await storage.createTransaction({
               userId: adminUser!.id,
               walletId: adminWallet.id,
               type: "fee",
-              amount: penaltyAmount.toString(),
+              amount: actualPenalty.toString(),
               currency: "USDT",
               description: `Cancellation penalty from receiver on order ${order.id}`,
             });
@@ -3073,20 +3073,26 @@ export async function registerRoutes(
             userId: order.receiverId,
             walletId: receiverWallet.id,
             type: "fee",
-            amount: penaltyAmount.toString(),
+            amount: actualPenalty.toString(),
             currency: "USDT",
             description: `5% cancellation penalty for order ${order.id}`,
           });
         }
 
-        // Full refund to loader
+        // Full refund to loader (collateral + fee reserve back to available)
         const loaderWallet = await storage.getWalletByUserId(order.loaderId);
         if (loaderWallet) {
           const loaderCollateral = parseFloat(order.loaderFrozenAmount);
           const loaderFeeReserve = parseFloat(order.loaderFeeReserve || "0");
           const loaderRefund = loaderCollateral + loaderFeeReserve;
           if (loaderRefund > 0) {
-            await storage.releaseEscrow(loaderWallet.id, loaderRefund.toString());
+            // Move from escrow to available
+            const currentLoaderAvailable = parseFloat(loaderWallet.availableBalance);
+            const currentLoaderEscrow = parseFloat(loaderWallet.escrowBalance);
+            const newLoaderAvailable = (currentLoaderAvailable + loaderRefund).toFixed(8);
+            const newLoaderEscrow = (currentLoaderEscrow - loaderRefund).toFixed(8);
+            
+            await storage.updateWalletBalance(loaderWallet.id, newLoaderAvailable, newLoaderEscrow);
             await storage.createTransaction({
               userId: order.loaderId,
               walletId: loaderWallet.id,
