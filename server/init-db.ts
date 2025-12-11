@@ -15,7 +15,7 @@ async function createEnumsIfNotExist() {
     `DO $$ BEGIN CREATE TYPE subscription_plan AS ENUM ('free', 'basic', 'pro', 'featured'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE notification_type AS ENUM ('order', 'payment', 'escrow', 'dispute', 'kyc', 'vendor', 'wallet', 'system'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE maintenance_mode AS ENUM ('none', 'partial', 'full'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
-    `DO $$ BEGIN CREATE TYPE loader_order_status AS ENUM ('created', 'awaiting_liability_confirmation', 'funds_sent_by_loader', 'asset_frozen_waiting', 'completed', 'closed_no_payment', 'dispute_resolved', 'cancelled'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN CREATE TYPE loader_order_status AS ENUM ('created', 'awaiting_liability_confirmation', 'awaiting_payment_details', 'payment_details_sent', 'payment_sent', 'asset_frozen_waiting', 'completed', 'closed_no_payment', 'cancelled_auto', 'cancelled_loader', 'cancelled_receiver', 'disputed', 'resolved_loader_wins', 'resolved_receiver_wins', 'resolved_mutual'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE liability_type AS ENUM ('full_payment', 'partial_10', 'partial_25', 'partial_50', 'time_bound_24h', 'time_bound_48h', 'time_bound_72h', 'time_bound_1week', 'time_bound_1month'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE countdown_time AS ENUM ('15min', '30min', '1hr', '2hr', '4hr', '24hr'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
   ];
@@ -388,6 +388,16 @@ async function runMigrations() {
     `ALTER TABLE loader_orders ADD COLUMN IF NOT EXISTS penalty_paid_by VARCHAR;`,
     `ALTER TABLE loader_order_messages ADD COLUMN IF NOT EXISTS is_admin_message BOOLEAN NOT NULL DEFAULT false;`,
     `ALTER TABLE loader_order_messages ADD COLUMN IF NOT EXISTS file_url TEXT;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'awaiting_payment_details'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'payment_details_sent'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'payment_sent'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'cancelled_auto'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'cancelled_loader'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'cancelled_receiver'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'disputed'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'resolved_loader_wins'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'resolved_receiver_wins'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN ALTER TYPE loader_order_status ADD VALUE IF NOT EXISTS 'resolved_mutual'; EXCEPTION WHEN duplicate_object THEN null; END $$;`,
   ];
 
   for (const migration of migrations) {
