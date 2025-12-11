@@ -392,6 +392,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {user?.role !== "admin" && user?.role !== "dispute_admin" && (
         <Card className="bg-gray-900/50 border-gray-800">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
@@ -558,6 +559,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </Layout>
   );

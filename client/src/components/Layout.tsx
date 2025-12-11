@@ -74,22 +74,25 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const isDisputeAdmin = user?.role === "dispute_admin";
+  const isAdmin = user?.role === "admin";
   
+  // Admin only sees Wallet, Admin, and Disputes - no marketplace/feeds/loaders
   const navItems = isDisputeAdmin
     ? [{ href: "/disputes", icon: Gavel, label: "Disputes" }]
+    : isAdmin
+    ? [
+        { href: "/wallet", icon: Wallet, label: "Wallet" },
+        { href: "/admin", icon: Shield, label: "Admin" },
+        { href: "/disputes", icon: Gavel, label: "Disputes" },
+      ]
     : [
         { href: "/", icon: Home, label: "Marketplace" },
         { href: "/orders", icon: ShoppingCart, label: "Orders" },
         { href: "/wallet", icon: Wallet, label: "Wallet" },
       ];
 
-  if (!isDisputeAdmin && (user?.role === "vendor" || user?.role === "admin")) {
+  if (!isDisputeAdmin && !isAdmin && user?.role === "vendor") {
     navItems.push({ href: "/vendor", icon: Store, label: "Vendor" });
-  }
-
-  if (user?.role === "admin") {
-    navItems.push({ href: "/admin", icon: Shield, label: "Admin" });
-    navItems.push({ href: "/disputes", icon: Gavel, label: "Disputes" });
   }
 
   return (
@@ -98,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
-              <Link href={isDisputeAdmin ? "/disputes" : "/"} className="flex items-center gap-2">
+              <Link href={isDisputeAdmin ? "/disputes" : isAdmin ? "/wallet" : "/"} className="flex items-center gap-2">
                 <div className="p-2 bg-purple-600 rounded-lg">
                   <Shield className="h-5 w-5 text-white" />
                 </div>

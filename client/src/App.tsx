@@ -51,6 +51,11 @@ const ProtectedRoute = memo(function ProtectedRoute({
     return <Redirect to="/disputes" />;
   }
   
+  // Admin should only access wallet, admin panel, and disputes - redirect from other pages
+  if (user?.role === "admin" && allowedRoles && !allowedRoles.includes("admin")) {
+    return <Redirect to="/wallet" />;
+  }
+  
   if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
     return <Redirect to="/" />;
   }
@@ -62,18 +67,18 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/" component={() => <ProtectedRoute component={HomePage} allowedRoles={["customer", "vendor", "admin"]} />} />
+        <Route path="/" component={() => <ProtectedRoute component={HomePage} allowedRoles={["customer", "vendor"]} />} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/wallet" component={() => <ProtectedRoute component={WalletPage} allowedRoles={["customer", "vendor", "admin"]} />} />
-        <Route path="/orders" component={() => <ProtectedRoute component={OrdersPage} allowedRoles={["customer", "vendor", "admin"]} />} />
-        <Route path="/order/:id" component={() => <ProtectedRoute component={OrderDetailPage} allowedRoles={["customer", "vendor", "admin"]} />} />
+        <Route path="/orders" component={() => <ProtectedRoute component={OrdersPage} allowedRoles={["customer", "vendor"]} />} />
+        <Route path="/order/:id" component={() => <ProtectedRoute component={OrderDetailPage} allowedRoles={["customer", "vendor"]} />} />
         <Route path="/trade/:id" component={TradePage} />
         <Route path="/notifications" component={NotificationsPage} />
         <Route path="/settings" component={SettingsPage} />
-        <Route path="/vendor" component={() => <ProtectedRoute component={VendorPage} allowedRoles={["customer", "vendor", "admin"]} />} />
+        <Route path="/vendor" component={() => <ProtectedRoute component={VendorPage} allowedRoles={["customer", "vendor"]} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} allowedRoles={["admin"]} />} />
         <Route path="/disputes" component={() => <ProtectedRoute component={DisputeAdminPage} allowedRoles={["admin", "dispute_admin"]} />} />
-        <Route path="/loader-order/:id" component={() => <ProtectedRoute component={LoaderOrderPage} allowedRoles={["customer", "vendor", "admin"]} />} />
+        <Route path="/loader-order/:id" component={() => <ProtectedRoute component={LoaderOrderPage} allowedRoles={["customer", "vendor"]} />} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
