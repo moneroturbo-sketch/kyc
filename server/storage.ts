@@ -25,6 +25,7 @@ import {
   loaderAds,
   loaderOrders,
   loaderOrderMessages,
+  loaderDisputes,
   type User,
   type InsertUser,
   type Kyc,
@@ -71,6 +72,8 @@ import {
   type InsertLoaderOrder,
   type LoaderOrderMessage,
   type InsertLoaderOrderMessage,
+  type LoaderDispute,
+  type InsertLoaderDispute,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -232,6 +235,14 @@ export interface IStorage {
   // Loader Zone - Messages
   getLoaderOrderMessages(orderId: string): Promise<LoaderOrderMessage[]>;
   createLoaderOrderMessage(message: InsertLoaderOrderMessage): Promise<LoaderOrderMessage>;
+
+  // Loader Zone - Disputes
+  getLoaderDispute(id: string): Promise<LoaderDispute | undefined>;
+  getLoaderDisputeByOrderId(orderId: string): Promise<LoaderDispute | undefined>;
+  getOpenLoaderDisputes(): Promise<LoaderDispute[]>;
+  createLoaderDispute(dispute: InsertLoaderDispute): Promise<LoaderDispute>;
+  updateLoaderDispute(id: string, updates: Partial<LoaderDispute>): Promise<LoaderDispute | undefined>;
+  getExpiredLoaderOrders(): Promise<LoaderOrder[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1053,8 +1064,10 @@ export class DatabaseStorage implements IStorage {
         dealAmount: loaderAds.dealAmount,
         loadingTerms: loaderAds.loadingTerms,
         upfrontPercentage: loaderAds.upfrontPercentage,
+        countdownTime: loaderAds.countdownTime,
         paymentMethods: loaderAds.paymentMethods,
         frozenCommitment: loaderAds.frozenCommitment,
+        loaderFeeReserve: loaderAds.loaderFeeReserve,
         isActive: loaderAds.isActive,
         createdAt: loaderAds.createdAt,
         loaderUsername: users.username,
@@ -1140,6 +1153,44 @@ export class DatabaseStorage implements IStorage {
   async createLoaderOrderMessage(message: InsertLoaderOrderMessage): Promise<LoaderOrderMessage> {
     const [newMessage] = await db.insert(loaderOrderMessages).values(message).returning();
     return newMessage;
+  }
+
+  // Loader Zone - Disputes
+  async getLoaderDispute(id: string): Promise<LoaderDispute | undefined> {
+    const [dispute] = await db.select().from(loaderDisputes).where(eq(loaderDisputes.id, id));
+    return dispute || undefined;
+  }
+
+  async getLoaderDisputeByOrderId(orderId: string): Promise<LoaderDispute | undefined> {
+    const [dispute] = await db.select().from(loaderDisputes).where(eq(loaderDisputes.orderId, orderId));
+    return dispute || undefined;
+  }
+
+  async getOpenLoaderDisputes(): Promise<LoaderDispute[]> {
+    return await db.select().from(loaderDisputes).where(eq(loaderDisputes.status, "open")).orderBy(desc(loaderDisputes.createdAt));
+  }
+
+  async createLoaderDispute(dispute: InsertLoaderDispute): Promise<LoaderDispute> {
+    const [newDispute] = await db.insert(loaderDisputes).values(dispute).returning();
+    return newDispute;
+  }
+
+  async updateLoaderDispute(id: string, updates: Partial<LoaderDispute>): Promise<LoaderDispute | undefined> {
+    const [dispute] = await db.update(loaderDisputes).set(updates).where(eq(loaderDisputes.id, id)).returning();
+    return dispute || undefined;
+  }
+
+  async getExpiredLoaderOrders(): Promise<LoaderOrder[]> {
+    return await db
+      .select()
+      .from(loaderOrders)
+      .where(
+        and(
+          eq(loaderOrders.status, "awaiting_payment_details"),
+          eq(loaderOrders.countdownStopped, false),
+          lte(loaderOrders.countdownExpiresAt, new Date())
+        )
+      );
   }
 }
 

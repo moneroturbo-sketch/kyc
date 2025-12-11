@@ -27,15 +27,34 @@ export const notificationTypeEnum = pgEnum("notification_type", ["order", "payme
 export const maintenanceModeEnum = pgEnum("maintenance_mode", ["none", "partial", "full"]);
 
 // Loader Zone Enums
+export const countdownTimeEnum = pgEnum("countdown_time", [
+  "15min",
+  "30min",
+  "1hr",
+  "2hr"
+]);
+
 export const loaderOrderStatusEnum = pgEnum("loader_order_status", [
   "created",
-  "awaiting_liability_confirmation",
-  "funds_sent_by_loader",
-  "asset_frozen_waiting",
+  "awaiting_payment_details",
+  "payment_details_sent",
+  "payment_sent",
   "completed",
-  "closed_no_payment",
-  "dispute_resolved",
-  "cancelled"
+  "cancelled_auto",
+  "cancelled_loader",
+  "cancelled_receiver",
+  "disputed",
+  "resolved_loader_wins",
+  "resolved_receiver_wins",
+  "resolved_mutual"
+]);
+
+export const loaderDisputeStatusEnum = pgEnum("loader_dispute_status", [
+  "open",
+  "in_review",
+  "resolved_loader_wins",
+  "resolved_receiver_wins",
+  "resolved_mutual"
 ]);
 
 export const liabilityTypeEnum = pgEnum("liability_type", [
@@ -764,8 +783,10 @@ export const loaderAds = pgTable("loader_ads", {
   dealAmount: numeric("deal_amount", { precision: 18, scale: 2 }).notNull(),
   loadingTerms: text("loading_terms"),
   upfrontPercentage: integer("upfront_percentage").default(0),
+  countdownTime: countdownTimeEnum("countdown_time").notNull().default("30min"),
   paymentMethods: text("payment_methods").array().notNull(),
   frozenCommitment: numeric("frozen_commitment", { precision: 18, scale: 2 }).notNull(),
+  loaderFeeReserve: numeric("loader_fee_reserve", { precision: 18, scale: 2 }).notNull().default("0"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
@@ -778,14 +799,23 @@ export const loaderOrders = pgTable("loader_orders", {
   receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   dealAmount: numeric("deal_amount", { precision: 18, scale: 2 }).notNull(),
   loaderFrozenAmount: numeric("loader_frozen_amount", { precision: 18, scale: 2 }).notNull(),
+  loaderFeeReserve: numeric("loader_fee_reserve", { precision: 18, scale: 2 }).notNull().default("0"),
   receiverFrozenAmount: numeric("receiver_frozen_amount", { precision: 18, scale: 2 }).default("0"),
+  receiverFeeReserve: numeric("receiver_fee_reserve", { precision: 18, scale: 2 }).default("0"),
   status: loaderOrderStatusEnum("status").notNull().default("created"),
-  liabilityType: liabilityTypeEnum("liability_type"),
-  liabilityDeadline: timestamp("liability_deadline"),
-  receiverConfirmed: boolean("receiver_confirmed").notNull().default(false),
-  loaderConfirmed: boolean("loader_confirmed").notNull().default(false),
+  countdownTime: countdownTimeEnum("countdown_time").notNull().default("30min"),
+  countdownExpiresAt: timestamp("countdown_expires_at"),
+  countdownStopped: boolean("countdown_stopped").notNull().default(false),
+  loaderSentPaymentDetails: boolean("loader_sent_payment_details").notNull().default(false),
+  receiverSentPaymentDetails: boolean("receiver_sent_payment_details").notNull().default(false),
+  loaderMarkedPaymentSent: boolean("loader_marked_payment_sent").notNull().default(false),
+  receiverConfirmedPayment: boolean("receiver_confirmed_payment").notNull().default(false),
+  cancelledBy: varchar("cancelled_by").references(() => users.id),
+  cancelReason: text("cancel_reason"),
   loaderFeeDeducted: numeric("loader_fee_deducted", { precision: 18, scale: 2 }).default("0"),
   receiverFeeDeducted: numeric("receiver_fee_deducted", { precision: 18, scale: 2 }).default("0"),
+  penaltyAmount: numeric("penalty_amount", { precision: 18, scale: 2 }).default("0"),
+  penaltyPaidBy: varchar("penalty_paid_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
   completedAt: timestamp("completed_at"),
@@ -796,8 +826,26 @@ export const loaderOrderMessages = pgTable("loader_order_messages", {
   orderId: varchar("order_id").notNull().references(() => loaderOrders.id, { onDelete: "cascade" }),
   senderId: varchar("sender_id").references(() => users.id),
   isSystem: boolean("is_system").notNull().default(false),
+  isAdminMessage: boolean("is_admin_message").notNull().default(false),
   content: text("content").notNull(),
+  fileUrl: text("file_url"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const loaderDisputes = pgTable("loader_disputes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => loaderOrders.id, { onDelete: "cascade" }),
+  openedBy: varchar("opened_by").notNull().references(() => users.id),
+  reason: text("reason").notNull(),
+  evidenceUrls: text("evidence_urls").array().default(sql`ARRAY[]::text[]`),
+  status: loaderDisputeStatusEnum("status").notNull().default("open"),
+  resolution: text("resolution"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  winnerId: varchar("winner_id").references(() => users.id),
+  loserId: varchar("loser_id").references(() => users.id),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 // Loader Zone Relations
@@ -825,6 +873,22 @@ export const loaderOrdersRelations = relations(loaderOrders, ({ one, many }) => 
     relationName: "receiverOrders",
   }),
   messages: many(loaderOrderMessages),
+  dispute: one(loaderDisputes),
+}));
+
+export const loaderDisputesRelations = relations(loaderDisputes, ({ one }) => ({
+  order: one(loaderOrders, {
+    fields: [loaderDisputes.orderId],
+    references: [loaderOrders.id],
+  }),
+  opener: one(users, {
+    fields: [loaderDisputes.openedBy],
+    references: [users.id],
+  }),
+  resolver: one(users, {
+    fields: [loaderDisputes.resolvedBy],
+    references: [users.id],
+  }),
 }));
 
 export const loaderOrderMessagesRelations = relations(loaderOrderMessages, ({ one }) => ({
@@ -844,6 +908,7 @@ export const insertLoaderAdSchema = createInsertSchema(loaderAds).omit({
   createdAt: true,
   updatedAt: true,
   frozenCommitment: true,
+  loaderFeeReserve: true,
   isActive: true,
 });
 
@@ -854,11 +919,32 @@ export const insertLoaderOrderSchema = createInsertSchema(loaderOrders).omit({
   completedAt: true,
   loaderFeeDeducted: true,
   receiverFeeDeducted: true,
+  penaltyAmount: true,
+  penaltyPaidBy: true,
+  countdownStopped: true,
+  loaderSentPaymentDetails: true,
+  receiverSentPaymentDetails: true,
+  loaderMarkedPaymentSent: true,
+  receiverConfirmedPayment: true,
+  cancelledBy: true,
+  cancelReason: true,
 });
 
 export const insertLoaderOrderMessageSchema = createInsertSchema(loaderOrderMessages).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertLoaderDisputeSchema = createInsertSchema(loaderDisputes).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
+  status: true,
+  resolution: true,
+  resolvedBy: true,
+  winnerId: true,
+  loserId: true,
+  adminNotes: true,
 });
 
 // Loader Zone Type Exports
@@ -870,3 +956,6 @@ export type LoaderOrder = typeof loaderOrders.$inferSelect;
 
 export type InsertLoaderOrderMessage = z.infer<typeof insertLoaderOrderMessageSchema>;
 export type LoaderOrderMessage = typeof loaderOrderMessages.$inferSelect;
+
+export type InsertLoaderDispute = z.infer<typeof insertLoaderDisputeSchema>;
+export type LoaderDispute = typeof loaderDisputes.$inferSelect;
