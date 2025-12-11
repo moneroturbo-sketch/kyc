@@ -67,14 +67,6 @@ interface Wallet {
   escrowBalance: string;
 }
 
-const PAYMENT_METHODS = [
-  "PayPal",
-  "Bank Transfer",
-  "Cash",
-  "Crypto",
-  "Wise",
-  "Zelle",
-];
 
 export default function LoadersZone() {
   const [, setLocation] = useLocation();
@@ -82,12 +74,11 @@ export default function LoadersZone() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("active");
   
-  const [assetType, setAssetType] = useState("USD");
   const [dealAmount, setDealAmount] = useState("");
   const [loadingTerms, setLoadingTerms] = useState("");
   const [upfrontPercentage, setUpfrontPercentage] = useState("0");
   const [countdownTime, setCountdownTime] = useState("30min");
-  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
+  const [paymentMethodsInput, setPaymentMethodsInput] = useState("");
 
   const { data: wallet } = useQuery<Wallet>({
     queryKey: ["wallet"],
@@ -127,15 +118,16 @@ export default function LoadersZone() {
 
   const postAdMutation = useMutation({
     mutationFn: async () => {
+      const paymentMethods = paymentMethodsInput.split(",").map(m => m.trim()).filter(m => m.length > 0);
       const res = await fetchWithAuth("/api/loaders/ads", {
         method: "POST",
         body: JSON.stringify({
-          assetType,
+          assetType: "USD",
           dealAmount: parseFloat(dealAmount),
           loadingTerms,
           upfrontPercentage: parseInt(upfrontPercentage),
           countdownTime,
-          paymentMethods: selectedPaymentMethods,
+          paymentMethods,
         }),
       });
       if (!res.ok) {
@@ -149,12 +141,11 @@ export default function LoadersZone() {
       queryClient.invalidateQueries({ queryKey: ["loaderAds"] });
       queryClient.invalidateQueries({ queryKey: ["myLoaderAds"] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
-      setAssetType("USD");
       setDealAmount("");
       setLoadingTerms("");
       setUpfrontPercentage("0");
       setCountdownTime("30min");
-      setSelectedPaymentMethods([]);
+      setPaymentMethodsInput("");
       setActiveTab("active");
     },
     onError: (error: Error) => {
@@ -211,15 +202,7 @@ export default function LoadersZone() {
   const loaderFee = dealAmountNum * 0.03; // 3% platform fee
   const totalRequired = collateral + loaderFee; // Total required upfront
   const availableBalance = parseFloat(wallet?.availableBalance || "0");
-  const canPost = dealAmount && dealAmountNum > 0 && selectedPaymentMethods.length > 0 && availableBalance >= totalRequired;
-
-  const togglePaymentMethod = (method: string) => {
-    if (selectedPaymentMethods.includes(method)) {
-      setSelectedPaymentMethods(prev => prev.filter(m => m !== method));
-    } else {
-      setSelectedPaymentMethods(prev => [...prev, method]);
-    }
-  };
+  const canPost = dealAmount && dealAmountNum > 0 && paymentMethodsInput.trim().length > 0 && availableBalance >= totalRequired;
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -382,11 +365,12 @@ export default function LoadersZone() {
                 <Label htmlFor="assetType">Asset Type</Label>
                 <Input 
                   id="assetType" 
-                  value={assetType} 
-                  onChange={(e) => setAssetType(e.target.value)}
-                  placeholder="e.g. USD, EUR, BTC"
+                  value="USD"
+                  disabled
+                  className="bg-muted"
                   data-testid="input-asset-type"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Fixed to USD</p>
               </div>
 
               <div>
@@ -459,21 +443,17 @@ export default function LoadersZone() {
               </div>
 
               <div>
-                <Label>Receiver Payment Methods</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {PAYMENT_METHODS.map((method) => (
-                    <Button
-                      key={method}
-                      type="button"
-                      variant={selectedPaymentMethods.includes(method) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => togglePaymentMethod(method)}
-                      data-testid={`button-payment-${method.toLowerCase().replace(" ", "-")}`}
-                    >
-                      {method}
-                    </Button>
-                  ))}
-                </div>
+                <Label htmlFor="paymentMethods">Receiver Payment Methods</Label>
+                <Input 
+                  id="paymentMethods" 
+                  value={paymentMethodsInput}
+                  onChange={(e) => setPaymentMethodsInput(e.target.value)}
+                  placeholder="e.g. PayPal, Bank Transfer, Mobile Money"
+                  data-testid="input-payment-methods"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter payment methods separated by commas
+                </p>
               </div>
 
               <div className="p-3 bg-muted rounded-lg">
