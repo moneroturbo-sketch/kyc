@@ -3415,18 +3415,32 @@ export async function registerRoutes(
       const adminWallet = adminUser ? await storage.getWalletByUserId(adminUser.id) : null;
       const totalPlatformFee = loaderFee + receiverFee;
 
-      // Release loader collateral (keep fee reserve for platform)
+      // Release loader collateral (fee reserve goes to platform)
       const loaderWallet = await storage.getWalletByUserId(order.loaderId);
+      const loaderCollateral = parseFloat(order.loaderFrozenAmount);
+      const loaderFeeReserve = parseFloat(order.loaderFeeReserve || "0");
+      
       if (loaderWallet) {
-        const loaderCollateral = parseFloat(order.loaderFrozenAmount);
-        const loaderFeeReserve = parseFloat(order.loaderFeeReserve || "0");
-        const loaderRefund = loaderCollateral; // Collateral back, fee goes to platform
+        // Loader gets collateral back, fee reserve goes to admin
+        const loaderEscrowTotal = loaderCollateral + loaderFeeReserve;
+        const loaderRefund = loaderCollateral; // Only collateral, fee goes to platform
         
-        if (loaderRefund > 0) {
-          await storage.releaseEscrow(loaderWallet.id, (loaderCollateral + loaderFeeReserve).toString());
-          const newBalance = (parseFloat(loaderWallet.availableBalance) - loaderFee).toFixed(2);
-          await storage.updateWalletBalance(loaderWallet.id, newBalance, loaderWallet.escrowBalance);
-        }
+        // Move collateral from escrow to available, fee reserve is removed from escrow (goes to admin)
+        const currentLoaderAvailable = parseFloat(loaderWallet.availableBalance);
+        const currentLoaderEscrow = parseFloat(loaderWallet.escrowBalance);
+        const newLoaderAvailable = (currentLoaderAvailable + loaderRefund).toFixed(8);
+        const newLoaderEscrow = (currentLoaderEscrow - loaderEscrowTotal).toFixed(8);
+        
+        await storage.updateWalletBalance(loaderWallet.id, newLoaderAvailable, newLoaderEscrow);
+        
+        await storage.createTransaction({
+          userId: order.loaderId,
+          walletId: loaderWallet.id,
+          type: "escrow_release",
+          amount: loaderRefund.toString(),
+          currency: "USDT",
+          description: `Collateral released - order completed`,
+        });
         
         await storage.createTransaction({
           userId: order.loaderId,
@@ -3438,19 +3452,20 @@ export async function registerRoutes(
         });
       }
 
-      // Transfer upfront to loader and deduct receiver fee
+      // Release receiver escrow and deduct fee, transfer upfront to loader
       const receiverWallet = await storage.getWalletByUserId(order.receiverId);
-      if (receiverWallet) {
-        const receiverUpfront = parseFloat(order.receiverFrozenAmount || "0");
-        const receiverFeeReserve = parseFloat(order.receiverFeeReserve || "0");
+      const receiverUpfront = parseFloat(order.receiverFrozenAmount || "0");
+      const receiverFeeReserve = parseFloat(order.receiverFeeReserve || "0");
+      const receiverEscrowTotal = receiverUpfront + receiverFeeReserve;
+      
+      if (receiverWallet && receiverEscrowTotal > 0) {
+        // Receiver's upfront goes to loader, fee reserve goes to admin
+        // So receiver gets nothing back to available, but escrow is cleared
+        const currentReceiverAvailable = parseFloat(receiverWallet.availableBalance);
+        const currentReceiverEscrow = parseFloat(receiverWallet.escrowBalance);
+        const newReceiverEscrow = (currentReceiverEscrow - receiverEscrowTotal).toFixed(8);
         
-        // Release receiver escrow
-        if (receiverUpfront + receiverFeeReserve > 0) {
-          await storage.releaseEscrow(receiverWallet.id, (receiverUpfront + receiverFeeReserve).toString());
-          // Deduct fee from available balance (fee reserve covers this)
-          const newBalance = (parseFloat(receiverWallet.availableBalance) - receiverFee).toFixed(2);
-          await storage.updateWalletBalance(receiverWallet.id, newBalance, receiverWallet.escrowBalance);
-        }
+        await storage.updateWalletBalance(receiverWallet.id, currentReceiverAvailable.toFixed(8), newReceiverEscrow);
         
         await storage.createTransaction({
           userId: order.receiverId,
@@ -3461,19 +3476,26 @@ export async function registerRoutes(
           description: `2% receiver platform fee for completed order`,
         });
 
-        // Transfer upfront to loader
+        // Transfer upfront to loader (add to loader's available balance)
         if (receiverUpfront > 0 && loaderWallet) {
-          const newLoaderBalance = (parseFloat(loaderWallet.availableBalance) + receiverUpfront).toFixed(2);
-          await storage.updateWalletBalance(loaderWallet.id, newLoaderBalance, loaderWallet.escrowBalance);
-          
-          await storage.createTransaction({
-            userId: order.loaderId,
-            walletId: loaderWallet.id,
-            type: "escrow_release",
-            amount: receiverUpfront.toString(),
-            currency: "USDT",
-            description: `Upfront payment received from receiver`,
-          });
+          // Re-fetch loader wallet to get updated balance
+          const updatedLoaderWallet = await storage.getWalletByUserId(order.loaderId);
+          if (updatedLoaderWallet) {
+            const loaderAvailableNow = parseFloat(updatedLoaderWallet.availableBalance);
+            const loaderEscrowNow = parseFloat(updatedLoaderWallet.escrowBalance);
+            const newLoaderAvailableWithUpfront = (loaderAvailableNow + receiverUpfront).toFixed(8);
+            
+            await storage.updateWalletBalance(loaderWallet.id, newLoaderAvailableWithUpfront, loaderEscrowNow.toFixed(8));
+            
+            await storage.createTransaction({
+              userId: order.loaderId,
+              walletId: loaderWallet.id,
+              type: "escrow_release",
+              amount: receiverUpfront.toString(),
+              currency: "USDT",
+              description: `Upfront payment received from receiver`,
+            });
+          }
         }
       }
 
