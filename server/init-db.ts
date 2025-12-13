@@ -18,6 +18,7 @@ async function createEnumsIfNotExist() {
     `DO $$ BEGIN CREATE TYPE loader_order_status AS ENUM ('created', 'awaiting_liability_confirmation', 'awaiting_payment_details', 'payment_details_sent', 'payment_sent', 'asset_frozen_waiting', 'completed', 'closed_no_payment', 'cancelled_auto', 'cancelled_loader', 'cancelled_receiver', 'disputed', 'resolved_loader_wins', 'resolved_receiver_wins', 'resolved_mutual'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE liability_type AS ENUM ('full_payment', 'partial_10', 'partial_25', 'partial_50', 'time_bound_24h', 'time_bound_48h', 'time_bound_72h', 'time_bound_1week', 'time_bound_1month'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
     `DO $$ BEGIN CREATE TYPE countdown_time AS ENUM ('15min', '30min', '1hr', '2hr', '4hr', '24hr'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+    `DO $$ BEGIN CREATE TYPE loader_feedback_type AS ENUM ('positive', 'negative'); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
   ];
 
   for (const query of enumQueries) {
@@ -362,6 +363,30 @@ async function createTablesIfNotExist() {
       content TEXT NOT NULL,
       file_url TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS loader_feedback (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_id VARCHAR NOT NULL REFERENCES loader_orders(id) ON DELETE CASCADE,
+      giver_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      receiver_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      feedback_type loader_feedback_type NOT NULL,
+      comment TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS loader_stats (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      total_trades INTEGER NOT NULL DEFAULT 0,
+      completed_trades INTEGER NOT NULL DEFAULT 0,
+      cancelled_trades INTEGER NOT NULL DEFAULT 0,
+      disputed_trades INTEGER NOT NULL DEFAULT 0,
+      positive_feedback INTEGER NOT NULL DEFAULT 0,
+      negative_feedback INTEGER NOT NULL DEFAULT 0,
+      is_verified_vendor BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP NOT NULL DEFAULT now(),
+      updated_at TIMESTAMP NOT NULL DEFAULT now()
     );
   `);
 }
