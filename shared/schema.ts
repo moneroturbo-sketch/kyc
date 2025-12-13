@@ -965,3 +965,81 @@ export type LoaderOrderMessage = typeof loaderOrderMessages.$inferSelect;
 
 export type InsertLoaderDispute = z.infer<typeof insertLoaderDisputeSchema>;
 export type LoaderDispute = typeof loaderDisputes.$inferSelect;
+
+// Loader Feedback Table for trust scores
+export const loaderFeedbackTypeEnum = pgEnum("loader_feedback_type", ["positive", "negative"]);
+
+export const loaderFeedback = pgTable("loader_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => loaderOrders.id, { onDelete: "cascade" }),
+  giverId: varchar("giver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  feedbackType: loaderFeedbackTypeEnum("feedback_type").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Loader Stats Table for tracking trades and trust scores
+export const loaderStats = pgTable("loader_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  totalTrades: integer("total_trades").notNull().default(0),
+  completedTrades: integer("completed_trades").notNull().default(0),
+  cancelledTrades: integer("cancelled_trades").notNull().default(0),
+  disputedTrades: integer("disputed_trades").notNull().default(0),
+  positiveFeedback: integer("positive_feedback").notNull().default(0),
+  negativeFeedback: integer("negative_feedback").notNull().default(0),
+  isVerifiedVendor: boolean("is_verified_vendor").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Loader Feedback Relations
+export const loaderFeedbackRelations = relations(loaderFeedback, ({ one }) => ({
+  order: one(loaderOrders, {
+    fields: [loaderFeedback.orderId],
+    references: [loaderOrders.id],
+  }),
+  giver: one(users, {
+    fields: [loaderFeedback.giverId],
+    references: [users.id],
+    relationName: "givenFeedback",
+  }),
+  receiver: one(users, {
+    fields: [loaderFeedback.receiverId],
+    references: [users.id],
+    relationName: "receivedFeedback",
+  }),
+}));
+
+export const loaderStatsRelations = relations(loaderStats, ({ one }) => ({
+  user: one(users, {
+    fields: [loaderStats.userId],
+    references: [users.id],
+  }),
+}));
+
+// Loader Feedback Insert Schema
+export const insertLoaderFeedbackSchema = createInsertSchema(loaderFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoaderStatsSchema = createInsertSchema(loaderStats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalTrades: true,
+  completedTrades: true,
+  cancelledTrades: true,
+  disputedTrades: true,
+  positiveFeedback: true,
+  negativeFeedback: true,
+});
+
+// Loader Feedback Type Exports
+export type InsertLoaderFeedback = z.infer<typeof insertLoaderFeedbackSchema>;
+export type LoaderFeedback = typeof loaderFeedback.$inferSelect;
+
+export type InsertLoaderStats = z.infer<typeof insertLoaderStatsSchema>;
+export type LoaderStats = typeof loaderStats.$inferSelect;

@@ -26,6 +26,8 @@ import {
   loaderOrders,
   loaderOrderMessages,
   loaderDisputes,
+  loaderFeedback,
+  loaderStats,
   type User,
   type InsertUser,
   type Kyc,
@@ -74,6 +76,10 @@ import {
   type InsertLoaderOrderMessage,
   type LoaderDispute,
   type InsertLoaderDispute,
+  type LoaderFeedback,
+  type InsertLoaderFeedback,
+  type LoaderStats,
+  type InsertLoaderStats,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -243,6 +249,18 @@ export interface IStorage {
   createLoaderDispute(dispute: InsertLoaderDispute): Promise<LoaderDispute>;
   updateLoaderDispute(id: string, updates: Partial<LoaderDispute>): Promise<LoaderDispute | undefined>;
   getExpiredLoaderOrders(): Promise<LoaderOrder[]>;
+
+  // Loader Zone - Feedback
+  getLoaderFeedback(id: string): Promise<LoaderFeedback | undefined>;
+  getLoaderFeedbackByOrderId(orderId: string): Promise<LoaderFeedback[]>;
+  getLoaderFeedbackByUser(userId: string): Promise<LoaderFeedback[]>;
+  createLoaderFeedback(feedback: InsertLoaderFeedback): Promise<LoaderFeedback>;
+
+  // Loader Zone - Stats
+  getLoaderStats(userId: string): Promise<LoaderStats | undefined>;
+  createLoaderStats(stats: InsertLoaderStats): Promise<LoaderStats>;
+  updateLoaderStats(userId: string, updates: Partial<LoaderStats>): Promise<LoaderStats | undefined>;
+  getOrCreateLoaderStats(userId: string): Promise<LoaderStats>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1196,6 +1214,57 @@ export class DatabaseStorage implements IStorage {
           lte(loaderOrders.countdownExpiresAt, new Date())
         )
       );
+  }
+
+  // Loader Zone - Feedback
+  async getLoaderFeedback(id: string): Promise<LoaderFeedback | undefined> {
+    const [feedback] = await db.select().from(loaderFeedback).where(eq(loaderFeedback.id, id));
+    return feedback || undefined;
+  }
+
+  async getLoaderFeedbackByOrderId(orderId: string): Promise<LoaderFeedback[]> {
+    return await db.select().from(loaderFeedback).where(eq(loaderFeedback.orderId, orderId));
+  }
+
+  async getLoaderFeedbackByUser(userId: string): Promise<LoaderFeedback[]> {
+    return await db
+      .select()
+      .from(loaderFeedback)
+      .where(eq(loaderFeedback.receiverId, userId))
+      .orderBy(desc(loaderFeedback.createdAt));
+  }
+
+  async createLoaderFeedback(feedback: InsertLoaderFeedback): Promise<LoaderFeedback> {
+    const [newFeedback] = await db.insert(loaderFeedback).values(feedback).returning();
+    return newFeedback;
+  }
+
+  // Loader Zone - Stats
+  async getLoaderStats(userId: string): Promise<LoaderStats | undefined> {
+    const [stats] = await db.select().from(loaderStats).where(eq(loaderStats.userId, userId));
+    return stats || undefined;
+  }
+
+  async createLoaderStats(stats: InsertLoaderStats): Promise<LoaderStats> {
+    const [newStats] = await db.insert(loaderStats).values(stats).returning();
+    return newStats;
+  }
+
+  async updateLoaderStats(userId: string, updates: Partial<LoaderStats>): Promise<LoaderStats | undefined> {
+    const [stats] = await db
+      .update(loaderStats)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(loaderStats.userId, userId))
+      .returning();
+    return stats || undefined;
+  }
+
+  async getOrCreateLoaderStats(userId: string): Promise<LoaderStats> {
+    let stats = await this.getLoaderStats(userId);
+    if (!stats) {
+      stats = await this.createLoaderStats({ userId });
+    }
+    return stats;
   }
 }
 
