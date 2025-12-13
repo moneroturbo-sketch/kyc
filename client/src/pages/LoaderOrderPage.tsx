@@ -116,7 +116,11 @@ export default function LoaderOrderPage() {
     queryKey: ["loaderOrderMessages", orderId],
     queryFn: async () => {
       const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/messages`);
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) {
+        return [];
+      }
+      return data;
     },
     enabled: !!orderId && isAuthenticated(),
     refetchInterval: 5000,
@@ -258,7 +262,7 @@ export default function LoaderOrderPage() {
     if (userProfile?.twoFactorEnabled) {
       setShow2FADialog(true);
     } else {
-      completeMutation.mutate();
+      completeMutation.mutate(undefined);
     }
   };
 
