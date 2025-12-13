@@ -638,10 +638,10 @@ export default function DisputeAdminPage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="p-3 bg-purple-900/30 border border-purple-700 rounded-lg">
-                              <p className="text-purple-300 text-sm font-medium mb-1">Dispute Reason</p>
-                              <p className="text-white text-sm">{loaderDisputeDetails.dispute.reason}</p>
-                              <p className="text-gray-400 text-xs mt-2">Deal: <span className="text-gray-900 dark:text-white font-bold">${parseFloat(loaderDisputeDetails.order.dealAmount).toFixed(2)}</span></p>
+                            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg">
+                              <p className="text-purple-700 dark:text-purple-300 text-sm font-medium mb-1">Dispute Reason</p>
+                              <p className="text-gray-900 dark:text-white text-sm">{loaderDisputeDetails.dispute.reason}</p>
+                              <p className="text-gray-600 dark:text-gray-400 text-xs mt-2">Deal: <span className="text-gray-900 dark:text-white font-bold">${parseFloat(loaderDisputeDetails.order.dealAmount).toFixed(2)}</span></p>
                             </div>
                             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                               <p className="text-gray-900 dark:text-white font-medium mb-2 flex items-center gap-2 text-sm">
@@ -654,14 +654,14 @@ export default function DisputeAdminPage() {
                                     const isLoader = msg.senderId === loaderDisputeDetails.order.loaderId;
                                     const senderLabel = msg.senderName || (isLoader ? loaderDisputeDetails.loader?.username : loaderDisputeDetails.receiver?.username) || "Unknown";
                                     return (
-                                      <div key={msg.id} className="text-xs p-2 bg-gray-800/50 rounded">
+                                      <div key={msg.id} className="text-xs p-2 bg-gray-300 dark:bg-gray-800/50 rounded">
                                         <div className="flex items-center gap-2 mb-1">
-                                          <span className={`font-medium ${isAdmin ? "text-purple-400" : isLoader ? "text-blue-400" : "text-green-400"}`}>{senderLabel}</span>
-                                          {isAdmin && <span className="flex items-center gap-1 px-1 py-0.5 bg-purple-600/20 rounded text-xs text-purple-300"><BadgeCheck className="h-2 w-2" />Admin</span>}
-                                          {!isAdmin && <span className={`px-1 py-0.5 rounded text-xs ${isLoader ? "bg-blue-600/20 text-blue-300" : "bg-green-600/20 text-green-300"}`}>{isLoader ? "Loader" : "Receiver"}</span>}
+                                          <span className={`font-medium ${isAdmin ? "text-purple-600 dark:text-purple-400" : isLoader ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>{senderLabel}</span>
+                                          {isAdmin && <span className="flex items-center gap-1 px-1 py-0.5 bg-purple-600/20 rounded text-xs text-purple-700 dark:text-purple-300"><BadgeCheck className="h-2 w-2" />Admin</span>}
+                                          {!isAdmin && <span className={`px-1 py-0.5 rounded text-xs ${isLoader ? "bg-blue-600/20 text-blue-700 dark:text-blue-300" : "bg-green-600/20 text-green-700 dark:text-green-300"}`}>{isLoader ? "Loader" : "Receiver"}</span>}
                                           <span className="text-gray-500 text-xs ml-auto">{new Date(msg.createdAt).toLocaleTimeString()}</span>
                                         </div>
-                                        <p className="text-white">{msg.content}</p>
+                                        <p className="text-gray-900 dark:text-white">{msg.content}</p>
                                       </div>
                                     );
                                   })
@@ -702,7 +702,7 @@ export default function DisputeAdminPage() {
                   ) : resolvedLoaderDisputes && resolvedLoaderDisputes.length > 0 ? (
                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
                       {resolvedLoaderDisputes.map((dispute: any) => (
-                        <div key={dispute.id} className="p-3 rounded-lg bg-gray-700" data-testid={`loader-resolved-dispute-${dispute.id}`}>
+                        <div key={dispute.id} className="p-3 rounded-lg bg-gray-200 dark:bg-gray-700" data-testid={`loader-resolved-dispute-${dispute.id}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-gray-900 dark:text-white font-medium text-sm">Order #{dispute.orderId.slice(0, 8)}</span>
                             <Badge className="bg-green-600 text-xs">{dispute.status}</Badge>
@@ -735,39 +735,39 @@ export default function DisputeAdminPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="bg-orange-900/30 border-orange-700">
+            <Card className="bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700">
               <CardContent className="p-4 flex items-center gap-3">
-                <AlertTriangle className="h-8 w-8 text-orange-400" />
+                <AlertTriangle className="h-8 w-8 text-orange-500 dark:text-orange-400" />
                 <div>
-                  <p className="text-orange-300 text-sm">Open Cases</p>
-                  <p className="text-2xl font-bold text-white">{stats?.openCount || 0}</p>
+                  <p className="text-orange-600 dark:text-orange-300 text-sm">Open Cases</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.openCount || 0}</p>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-yellow-900/30 border-yellow-700">
+            <Card className="bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700">
               <CardContent className="p-4 flex items-center gap-3">
-                <Clock className="h-8 w-8 text-yellow-400" />
+                <Clock className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
                 <div>
-                  <p className="text-yellow-300 text-sm">In Review</p>
-                  <p className="text-2xl font-bold text-white">{stats?.inReviewCount || 0}</p>
+                  <p className="text-yellow-600 dark:text-yellow-300 text-sm">In Review</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.inReviewCount || 0}</p>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-green-900/30 border-green-700">
+            <Card className="bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700">
               <CardContent className="p-4 flex items-center gap-3">
-                <CheckCircle className="h-8 w-8 text-green-400" />
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                 <div>
-                  <p className="text-green-300 text-sm">Resolved</p>
-                  <p className="text-2xl font-bold text-white">{stats?.resolvedCount || 0}</p>
+                  <p className="text-green-600 dark:text-green-300 text-sm">Resolved</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.resolvedCount || 0}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700">
               <CardContent className="p-4 flex items-center gap-3">
-                <Shield className="h-8 w-8 text-gray-400" />
+                <Shield className="h-8 w-8 text-gray-500 dark:text-gray-400" />
                 <div>
-                  <p className="text-gray-400 text-sm">Total Cases</p>
-                  <p className="text-2xl font-bold text-white">{stats?.totalCount || 0}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Total Cases</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.totalCount || 0}</p>
                 </div>
               </CardContent>
             </Card>
@@ -996,15 +996,15 @@ export default function DisputeAdminPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-orange-900/30 border border-orange-700 rounded-lg">
-                    <p className="text-orange-300 text-sm font-medium mb-1">Dispute Reason</p>
-                    <p className="text-white">{disputeDetails.dispute.reason}</p>
-                    <p className="text-gray-400 text-sm mt-2">
+                  <div className="p-4 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
+                    <p className="text-orange-600 dark:text-orange-300 text-sm font-medium mb-1">Dispute Reason</p>
+                    <p className="text-gray-900 dark:text-white">{disputeDetails.dispute.reason}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
                       Amount in dispute: <span className="text-gray-900 dark:text-white font-bold">${parseFloat(disputeDetails.order.fiatAmount).toFixed(2)}</span>
                     </p>
                   </div>
 
-                  <div className="bg-gray-800/50 rounded-lg p-4">
+                  <div className="bg-gray-100 dark:bg-gray-800/50 rounded-lg p-4">
                     <p className="text-gray-900 dark:text-white font-medium mb-3 flex items-center gap-2">
                       <MessageCircle className="h-4 w-4" /> Order Chat History
                     </p>
@@ -1016,19 +1016,19 @@ export default function DisputeAdminPage() {
                           const senderLabel = msg.senderName || (isBuyer ? disputeDetails.buyer?.username : disputeDetails.seller?.username) || "Unknown";
                           
                           return (
-                            <div key={msg.id} className="text-sm p-2 bg-gray-800/50 rounded">
+                            <div key={msg.id} className="text-sm p-2 bg-gray-300 dark:bg-gray-800/50 rounded">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className={`font-medium ${isAdmin ? "text-orange-400" : isBuyer ? "text-blue-400" : "text-green-400"}`}>
+                                <span className={`font-medium ${isAdmin ? "text-orange-600 dark:text-orange-400" : isBuyer ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>
                                   {senderLabel}
                                 </span>
                                 {isAdmin && (
-                                  <span className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-600/20 rounded text-xs text-orange-300">
+                                  <span className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-600/20 rounded text-xs text-orange-700 dark:text-orange-300">
                                     <BadgeCheck className="h-3 w-3" />
                                     Verified Admin
                                   </span>
                                 )}
                                 {!isAdmin && (
-                                  <span className={`px-1.5 py-0.5 rounded text-xs ${isBuyer ? "bg-blue-600/20 text-blue-300" : "bg-green-600/20 text-green-300"}`}>
+                                  <span className={`px-1.5 py-0.5 rounded text-xs ${isBuyer ? "bg-blue-600/20 text-blue-700 dark:text-blue-300" : "bg-green-600/20 text-green-700 dark:text-green-300"}`}>
                                     {isBuyer ? "Buyer" : "Seller"}
                                   </span>
                                 )}
@@ -1036,7 +1036,7 @@ export default function DisputeAdminPage() {
                                   {new Date(msg.createdAt).toLocaleTimeString()}
                                 </span>
                               </div>
-                              <p className="text-white">{msg.message}</p>
+                              <p className="text-gray-900 dark:text-white">{msg.message}</p>
                             </div>
                           );
                         })

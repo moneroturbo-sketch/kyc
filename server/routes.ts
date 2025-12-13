@@ -3551,28 +3551,38 @@ export async function registerRoutes(
 
         const receiverWallet = await storage.getWalletByUserId(order.receiverId);
         if (receiverWallet) {
-          const receiverTotal = parseFloat(order.receiverFrozenAmount || "0") + parseFloat(order.receiverFeeReserve || "0");
-          const receiverRefund = receiverTotal - penaltyAmount;
+          const receiverEscrowTotal = parseFloat(order.receiverFrozenAmount || "0") + parseFloat(order.receiverFeeReserve || "0");
+          const currentReceiverEscrow = parseFloat(receiverWallet.escrowBalance);
+          const currentReceiverAvailable = parseFloat(receiverWallet.availableBalance);
           
-          if (receiverTotal > 0) {
-            await storage.releaseEscrow(receiverWallet.id, receiverTotal.toString());
-          }
+          // Calculate how much penalty can come from escrow vs available balance
+          const penaltyFromEscrow = Math.min(penaltyAmount, receiverEscrowTotal);
+          const penaltyFromAvailable = penaltyAmount - penaltyFromEscrow;
           
-          if (receiverRefund < 0) {
-            const newBalance = (parseFloat(receiverWallet.availableBalance) + receiverRefund).toFixed(2);
-            await storage.updateWalletBalance(receiverWallet.id, newBalance, receiverWallet.escrowBalance);
-          } else {
-            const newBalance = (parseFloat(receiverWallet.availableBalance) - penaltyAmount).toFixed(2);
-            await storage.updateWalletBalance(receiverWallet.id, newBalance, receiverWallet.escrowBalance);
-          }
+          // Release escrow minus penalty (loser's escrow is cleared, penalty goes to admin)
+          const receiverRefund = receiverEscrowTotal - penaltyFromEscrow;
+          const newReceiverEscrow = (currentReceiverEscrow - receiverEscrowTotal).toFixed(8);
+          const newReceiverAvailable = (currentReceiverAvailable + receiverRefund - penaltyFromAvailable).toFixed(8);
           
+          await storage.updateWalletBalance(receiverWallet.id, newReceiverAvailable, newReceiverEscrow);
+          
+          // Transfer penalty to admin wallet
           if (adminWallet) {
-            const newAdminBalance = (parseFloat(adminWallet.availableBalance) + penaltyAmount).toFixed(2);
+            const newAdminBalance = (parseFloat(adminWallet.availableBalance) + penaltyAmount).toFixed(8);
             await storage.updateWalletBalance(adminWallet.id, newAdminBalance, adminWallet.escrowBalance);
+            
+            await storage.createTransaction({
+              walletId: adminWallet.id,
+              userId: adminUser!.id,
+              type: "fee",
+              amount: penaltyAmount.toString(),
+              currency: "USDT",
+              description: `Dispute penalty from loser (receiver) - order ${order.id}`,
+            });
           }
         }
 
-        // Full refund to loader
+        // Full refund to loader (winner)
         const loaderWallet = await storage.getWalletByUserId(order.loaderId);
         if (loaderWallet) {
           const loaderRefund = parseFloat(order.loaderFrozenAmount) + parseFloat(order.loaderFeeReserve || "0");
@@ -3586,20 +3596,38 @@ export async function registerRoutes(
 
         const loaderWallet = await storage.getWalletByUserId(order.loaderId);
         if (loaderWallet) {
-          const loaderTotal = parseFloat(order.loaderFrozenAmount) + parseFloat(order.loaderFeeReserve || "0");
-          const loaderRefund = loaderTotal - penaltyAmount;
+          const loaderEscrowTotal = parseFloat(order.loaderFrozenAmount) + parseFloat(order.loaderFeeReserve || "0");
+          const currentLoaderEscrow = parseFloat(loaderWallet.escrowBalance);
+          const currentLoaderAvailable = parseFloat(loaderWallet.availableBalance);
           
-          if (loaderRefund > 0) {
-            await storage.releaseEscrow(loaderWallet.id, loaderRefund.toString());
-          }
+          // Calculate how much penalty can come from escrow vs available balance
+          const penaltyFromEscrow = Math.min(penaltyAmount, loaderEscrowTotal);
+          const penaltyFromAvailable = penaltyAmount - penaltyFromEscrow;
           
+          // Release escrow minus penalty (loser's escrow is cleared, penalty goes to admin)
+          const loaderRefund = loaderEscrowTotal - penaltyFromEscrow;
+          const newLoaderEscrow = (currentLoaderEscrow - loaderEscrowTotal).toFixed(8);
+          const newLoaderAvailable = (currentLoaderAvailable + loaderRefund - penaltyFromAvailable).toFixed(8);
+          
+          await storage.updateWalletBalance(loaderWallet.id, newLoaderAvailable, newLoaderEscrow);
+          
+          // Transfer penalty to admin wallet
           if (adminWallet) {
-            const newAdminBalance = (parseFloat(adminWallet.availableBalance) + penaltyAmount).toFixed(2);
+            const newAdminBalance = (parseFloat(adminWallet.availableBalance) + penaltyAmount).toFixed(8);
             await storage.updateWalletBalance(adminWallet.id, newAdminBalance, adminWallet.escrowBalance);
+            
+            await storage.createTransaction({
+              walletId: adminWallet.id,
+              userId: adminUser!.id,
+              type: "fee",
+              amount: penaltyAmount.toString(),
+              currency: "USDT",
+              description: `Dispute penalty from loser (loader) - order ${order.id}`,
+            });
           }
         }
 
-        // Full refund to receiver
+        // Full refund to receiver (winner)
         const receiverWallet = await storage.getWalletByUserId(order.receiverId);
         if (receiverWallet) {
           const receiverRefund = parseFloat(order.receiverFrozenAmount || "0") + parseFloat(order.receiverFeeReserve || "0");
