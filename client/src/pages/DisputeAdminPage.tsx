@@ -77,6 +77,29 @@ interface LoaderDispute {
   receiverUsername?: string;
 }
 
+interface LoaderDisputeDetails {
+  dispute: LoaderDispute;
+  order: {
+    id: string;
+    loaderId: string;
+    receiverId: string;
+    dealAmount: string;
+    status: string;
+  };
+  chatMessages: Array<{
+    id: string;
+    senderId: string;
+    senderName?: string;
+    senderRole?: string;
+    content: string;
+    createdAt: string;
+  }>;
+  loader: { id: string; username: string; isFrozen: boolean; frozenReason: string | null } | null;
+  receiver: { id: string; username: string; isFrozen: boolean; frozenReason: string | null } | null;
+  loaderWallet: { availableBalance: string; escrowBalance: string } | null;
+  receiverWallet: { availableBalance: string; escrowBalance: string } | null;
+}
+
 interface DisputeDetails {
   dispute: Dispute;
   order: {
@@ -121,6 +144,10 @@ export default function DisputeAdminPage() {
   const [disputeTab, setDisputeTab] = useState<"marketplace" | "loaders">("marketplace");
   const [selectedLoaderDispute, setSelectedLoaderDispute] = useState<string | null>(null);
   const [loaderResolution, setLoaderResolution] = useState("");
+  const [newLoaderMessage, setNewLoaderMessage] = useState("");
+  const [loaderFreezeUserId, setLoaderFreezeUserId] = useState<string | null>(null);
+  const [showLoaderFreezeDialog, setShowLoaderFreezeDialog] = useState(false);
+  const [loaderFreezeReason, setLoaderFreezeReason] = useState("");
 
   if (user?.role !== "dispute_admin" && user?.role !== "admin") {
     setLocation("/");
@@ -174,6 +201,74 @@ export default function DisputeAdminPage() {
       return res.json();
     },
     enabled: disputeTab === "loaders",
+  });
+
+  const { data: loaderDisputeDetails, isLoading: loaderDetailsLoading } = useQuery<LoaderDisputeDetails>({
+    queryKey: ["loaderDisputeDetails", selectedLoaderDispute],
+    queryFn: async () => {
+      const res = await fetchWithAuth(`/api/admin/loader-disputes/${selectedLoaderDispute}/details`);
+      if (!res.ok) throw new Error("Failed to fetch dispute details");
+      return res.json();
+    },
+    enabled: !!selectedLoaderDispute,
+    refetchInterval: selectedLoaderDispute ? 5000 : false,
+  });
+
+  const sendLoaderMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const res = await fetchWithAuth(`/api/admin/loader-disputes/${selectedLoaderDispute}/message`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
+      if (!res.ok) throw new Error("Failed to send message");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loaderDisputeDetails", selectedLoaderDispute] });
+      setNewLoaderMessage("");
+      toast({ title: "Message sent" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Failed to send message" });
+    },
+  });
+
+  const freezeLoaderUserMutation = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      const res = await fetchWithAuth(`/api/admin/users/${userId}/freeze`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error("Failed to freeze user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loaderDisputeDetails", selectedLoaderDispute] });
+      setShowLoaderFreezeDialog(false);
+      setLoaderFreezeReason("");
+      setLoaderFreezeUserId(null);
+      toast({ title: "User Frozen", description: "Account has been frozen for investigation" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Failed to freeze user" });
+    },
+  });
+
+  const unfreezeLoaderUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetchWithAuth(`/api/admin/users/${userId}/unfreeze`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to unfreeze user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loaderDisputeDetails", selectedLoaderDispute] });
+      toast({ title: "User Unfrozen" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Failed to unfreeze user" });
+    },
   });
 
   const resolveLoaderDisputeMutation = useMutation({
@@ -350,102 +445,265 @@ export default function DisputeAdminPage() {
           </TabsList>
 
           <TabsContent value="loaders" className="mt-4">
-            <Card className="bg-gray-900/50 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-purple-400" />
-                  Loaders Zone Disputes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loaderDisputesLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-gray-800" />)}
-                  </div>
-                ) : loaderDisputes && loaderDisputes.length > 0 ? (
-                  <div className="space-y-4">
-                    {loaderDisputes.map((dispute) => (
-                      <div key={dispute.id} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-white font-medium">Order #{dispute.orderId.slice(0, 8)}</span>
-                          <Badge className="bg-orange-600">{dispute.status}</Badge>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="bg-gray-900/50 border-gray-800 lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-purple-400" />
+                    Loaders Disputes ({loaderDisputes?.length || 0})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loaderDisputesLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-gray-800" />)}
+                    </div>
+                  ) : loaderDisputes && loaderDisputes.length > 0 ? (
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                      {loaderDisputes.map((dispute) => (
+                        <div
+                          key={dispute.id}
+                          className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedLoaderDispute === dispute.id
+                              ? "bg-purple-900/50 border border-purple-600"
+                              : "bg-gray-800 hover:bg-gray-700"
+                          }`}
+                          onClick={() => setSelectedLoaderDispute(dispute.id)}
+                          data-testid={`loader-dispute-item-${dispute.id}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white font-medium text-sm">
+                              Order #{dispute.orderId.slice(0, 8)}
+                            </span>
+                            <Badge className="bg-purple-600 text-xs">{dispute.status}</Badge>
+                          </div>
+                          <p className="text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
+                          <p className="text-gray-500 text-xs mt-1">
+                            ${dispute.order?.dealAmount || "0"} • {new Date(dispute.createdAt).toLocaleDateString()}
+                          </p>
                         </div>
-                        <p className="text-gray-400 text-sm mb-2">{dispute.reason}</p>
-                        <div className="text-sm text-gray-500 mb-3">
-                          <p>Loader: {dispute.loaderUsername || "Unknown"}</p>
-                          <p>Receiver: {dispute.receiverUsername || "Unknown"}</p>
-                          <p>Amount: ${dispute.order?.dealAmount || "0"}</p>
-                        </div>
-                        {selectedLoaderDispute === dispute.id ? (
-                          <div className="space-y-3 pt-3 border-t border-gray-700">
-                            <Textarea
-                              placeholder="Resolution notes..."
-                              value={loaderResolution}
-                              onChange={(e) => setLoaderResolution(e.target.value)}
-                              className="bg-gray-900 border-gray-700"
-                              data-testid="input-loader-resolution"
-                            />
-                            <div className="flex gap-2 flex-wrap">
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+                      <p className="text-gray-400">No open loader disputes</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-900/50 border-gray-800 lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Eye className="h-5 w-5 text-purple-400" />
+                    Loader Dispute Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!selectedLoaderDispute ? (
+                    <div className="text-center py-12">
+                      <Gavel className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400">Select a dispute to view details</p>
+                    </div>
+                  ) : loaderDetailsLoading ? (
+                    <div className="space-y-4">
+                      <Skeleton className="h-32 bg-gray-800" />
+                      <Skeleton className="h-64 bg-gray-800" />
+                    </div>
+                  ) : loaderDisputeDetails ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-800 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-gray-400 text-sm flex items-center gap-1">
+                              <User className="h-4 w-4" /> Loader
+                            </p>
+                            {loaderDisputeDetails.loader?.isFrozen && (
+                              <Badge className="bg-red-600 text-xs">Frozen</Badge>
+                            )}
+                          </div>
+                          <p className="text-white font-bold">{loaderDisputeDetails.loader?.username || "Unknown"}</p>
+                          {loaderDisputeDetails.loaderWallet && (
+                            <p className="text-gray-400 text-sm mt-1">
+                              Balance: ${parseFloat(loaderDisputeDetails.loaderWallet.availableBalance).toFixed(2)} | 
+                              Escrow: ${parseFloat(loaderDisputeDetails.loaderWallet.escrowBalance).toFixed(2)}
+                            </p>
+                          )}
+                          <div className="flex gap-2 mt-2">
+                            {loaderDisputeDetails.loader && !loaderDisputeDetails.loader.isFrozen && (
                               <Button
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: dispute.id, winner: "loader", resolution: loaderResolution })}
-                                disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending}
-                                data-testid="button-resolve-loader-wins"
+                                variant="destructive"
+                                onClick={() => { setLoaderFreezeUserId(loaderDisputeDetails.loader!.id); setShowLoaderFreezeDialog(true); }}
+                                data-testid="button-freeze-loader"
                               >
-                                Loader Wins
+                                <Ban className="h-3 w-3 mr-1" /> Freeze
                               </Button>
-                              <Button
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700"
-                                onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: dispute.id, winner: "receiver", resolution: loaderResolution })}
-                                disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending}
-                                data-testid="button-resolve-receiver-wins"
-                              >
-                                Receiver Wins
-                              </Button>
+                            )}
+                            {loaderDisputeDetails.loader?.isFrozen && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="border-gray-600"
-                                onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: dispute.id, winner: "mutual", resolution: loaderResolution })}
-                                disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending}
-                                data-testid="button-resolve-mutual"
+                                onClick={() => unfreezeLoaderUserMutation.mutate(loaderDisputeDetails.loader!.id)}
+                                data-testid="button-unfreeze-loader"
                               >
-                                Mutual Resolution
+                                Unfreeze
                               </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="p-4 bg-gray-800 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-gray-400 text-sm flex items-center gap-1">
+                              <User className="h-4 w-4" /> Receiver
+                            </p>
+                            {loaderDisputeDetails.receiver?.isFrozen && (
+                              <Badge className="bg-red-600 text-xs">Frozen</Badge>
+                            )}
+                          </div>
+                          <p className="text-white font-bold">{loaderDisputeDetails.receiver?.username || "Unknown"}</p>
+                          {loaderDisputeDetails.receiverWallet && (
+                            <p className="text-gray-400 text-sm mt-1">
+                              Balance: ${parseFloat(loaderDisputeDetails.receiverWallet.availableBalance).toFixed(2)} | 
+                              Escrow: ${parseFloat(loaderDisputeDetails.receiverWallet.escrowBalance).toFixed(2)}
+                            </p>
+                          )}
+                          <div className="flex gap-2 mt-2">
+                            {loaderDisputeDetails.receiver && !loaderDisputeDetails.receiver.isFrozen && (
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                onClick={() => { setSelectedLoaderDispute(null); setLoaderResolution(""); }}
-                                data-testid="button-cancel-resolve"
+                                variant="destructive"
+                                onClick={() => { setLoaderFreezeUserId(loaderDisputeDetails.receiver!.id); setShowLoaderFreezeDialog(true); }}
+                                data-testid="button-freeze-receiver"
                               >
-                                Cancel
+                                <Ban className="h-3 w-3 mr-1" /> Freeze
                               </Button>
-                            </div>
+                            )}
+                            {loaderDisputeDetails.receiver?.isFrozen && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => unfreezeLoaderUserMutation.mutate(loaderDisputeDetails.receiver!.id)}
+                                data-testid="button-unfreeze-receiver"
+                              >
+                                Unfreeze
+                              </Button>
+                            )}
                           </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            className="bg-purple-600 hover:bg-purple-700"
-                            onClick={() => setSelectedLoaderDispute(dispute.id)}
-                            data-testid={`button-resolve-loader-dispute-${dispute.id}`}
-                          >
-                            <Gavel className="h-4 w-4 mr-1" />
-                            Resolve Dispute
-                          </Button>
-                        )}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                    <p className="text-gray-400">No open loader disputes</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+
+                      <div className="p-4 bg-purple-900/30 border border-purple-700 rounded-lg">
+                        <p className="text-purple-300 text-sm font-medium mb-1">Dispute Reason</p>
+                        <p className="text-white">{loaderDisputeDetails.dispute.reason}</p>
+                        <p className="text-gray-400 text-sm mt-2">
+                          Deal Amount: <span className="text-white font-bold">${parseFloat(loaderDisputeDetails.order.dealAmount).toFixed(2)}</span>
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-800/50 rounded-lg p-4">
+                        <p className="text-white font-medium mb-3 flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4" /> Order Chat History
+                        </p>
+                        <div className="h-48 overflow-y-auto space-y-2 mb-4 p-2 bg-gray-900 rounded">
+                          {loaderDisputeDetails.chatMessages.length > 0 ? (
+                            loaderDisputeDetails.chatMessages.map((msg) => {
+                              const isAdmin = msg.senderRole === "admin" || msg.senderRole === "dispute_admin";
+                              const isLoader = msg.senderId === loaderDisputeDetails.order.loaderId;
+                              const senderLabel = msg.senderName || (isLoader ? loaderDisputeDetails.loader?.username : loaderDisputeDetails.receiver?.username) || "Unknown";
+                              
+                              return (
+                                <div key={msg.id} className="text-sm p-2 bg-gray-800/50 rounded">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`font-medium ${isAdmin ? "text-purple-400" : isLoader ? "text-blue-400" : "text-green-400"}`}>
+                                      {senderLabel}
+                                    </span>
+                                    {isAdmin && (
+                                      <span className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-600/20 rounded text-xs text-purple-300">
+                                        <BadgeCheck className="h-3 w-3" />
+                                        Admin
+                                      </span>
+                                    )}
+                                    {!isAdmin && (
+                                      <span className={`px-1.5 py-0.5 rounded text-xs ${isLoader ? "bg-blue-600/20 text-blue-300" : "bg-green-600/20 text-green-300"}`}>
+                                        {isLoader ? "Loader" : "Receiver"}
+                                      </span>
+                                    )}
+                                    <span className="text-gray-500 text-xs ml-auto">
+                                      {new Date(msg.createdAt).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-white">{msg.content}</p>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-gray-500 text-center py-4">No messages</p>
+                          )}
+                        </div>
+                        <form onSubmit={(e) => { e.preventDefault(); if (newLoaderMessage.trim()) sendLoaderMessageMutation.mutate(newLoaderMessage); }} className="flex gap-2">
+                          <Input
+                            placeholder="Send a message to both parties..."
+                            className="flex-1 bg-gray-800 border-gray-700 text-white"
+                            value={newLoaderMessage}
+                            onChange={(e) => setNewLoaderMessage(e.target.value)}
+                            data-testid="input-loader-admin-message"
+                          />
+                          <Button
+                            type="submit"
+                            className="bg-purple-600 hover:bg-purple-700"
+                            disabled={!newLoaderMessage.trim() || sendLoaderMessageMutation.isPending}
+                            data-testid="button-send-loader-admin-message"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder="Resolution notes (required)..."
+                          className="bg-gray-800 border-gray-700 text-white"
+                          value={loaderResolution}
+                          onChange={(e) => setLoaderResolution(e.target.value)}
+                          data-testid="input-loader-resolution"
+                        />
+                        <div className="flex gap-3">
+                          <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: selectedLoaderDispute, winner: "loader", resolution: loaderResolution })}
+                            disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending}
+                            data-testid="button-resolve-loader-wins"
+                          >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Loader Wins
+                          </Button>
+                          <Button
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: selectedLoaderDispute, winner: "receiver", resolution: loaderResolution })}
+                            disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending}
+                            data-testid="button-resolve-receiver-wins"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Receiver Wins
+                          </Button>
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full border-gray-600"
+                          onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: selectedLoaderDispute, winner: "mutual", resolution: loaderResolution })}
+                          disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending}
+                          data-testid="button-resolve-mutual"
+                        >
+                          Mutual Resolution (Split)
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="marketplace" className="mt-4">
@@ -956,6 +1214,55 @@ export default function DisputeAdminPage() {
                   data-testid="button-confirm-2fa-resolve"
                 >
                   {resolveDisputeMutation.isPending ? "Processing..." : "Confirm Resolution"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showLoaderFreezeDialog} onOpenChange={setShowLoaderFreezeDialog}>
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <Ban className="h-5 w-5 text-red-400" />
+                Freeze Account
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Freezing this account will prevent the user from making any transactions. This action can be reversed.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <Textarea
+                placeholder="Reason for freezing account (e.g., Suspected scam activity, Under investigation...)"
+                className="bg-gray-800 border-gray-700 text-white"
+                value={loaderFreezeReason}
+                onChange={(e) => setLoaderFreezeReason(e.target.value)}
+                data-testid="input-loader-freeze-reason"
+              />
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShowLoaderFreezeDialog(false);
+                    setLoaderFreezeReason("");
+                    setLoaderFreezeUserId(null);
+                  }}
+                  data-testid="button-cancel-loader-freeze"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  onClick={() => {
+                    if (loaderFreezeUserId && loaderFreezeReason.trim()) {
+                      freezeLoaderUserMutation.mutate({ userId: loaderFreezeUserId, reason: loaderFreezeReason });
+                    }
+                  }}
+                  disabled={!loaderFreezeReason.trim() || freezeLoaderUserMutation.isPending}
+                  data-testid="button-confirm-loader-freeze"
+                >
+                  {freezeLoaderUserMutation.isPending ? "Freezing..." : "Freeze Account"}
                 </Button>
               </div>
             </div>

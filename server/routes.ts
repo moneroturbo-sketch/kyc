@@ -3357,6 +3357,99 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get loader dispute details
+  app.get("/api/admin/loader-disputes/:id/details", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (req.user!.role !== "admin" && req.user!.role !== "dispute_admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const dispute = await storage.getLoaderDispute(req.params.id);
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      const order = await storage.getLoaderOrder(dispute.orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const loader = await storage.getUser(order.loaderId);
+      const receiver = await storage.getUser(order.receiverId);
+      const loaderWallet = await storage.getWalletByUserId(order.loaderId);
+      const receiverWallet = await storage.getWalletByUserId(order.receiverId);
+
+      const messages = await storage.getLoaderOrderMessages(order.id);
+      const enrichedMessages = await Promise.all(messages.map(async (msg) => {
+        if (msg.senderId) {
+          const sender = await storage.getUser(msg.senderId);
+          return { 
+            ...msg, 
+            senderName: sender?.username,
+            senderRole: sender?.role,
+          };
+        }
+        return { ...msg, senderName: "System", senderRole: "system" };
+      }));
+
+      res.json({
+        dispute,
+        order,
+        loader: loader ? { 
+          id: loader.id, 
+          username: loader.username, 
+          isFrozen: loader.isFrozen || false,
+          frozenReason: loader.frozenReason || null,
+        } : null,
+        receiver: receiver ? { 
+          id: receiver.id, 
+          username: receiver.username, 
+          isFrozen: receiver.isFrozen || false,
+          frozenReason: receiver.frozenReason || null,
+        } : null,
+        loaderWallet: loaderWallet ? {
+          availableBalance: loaderWallet.availableBalance,
+          escrowBalance: loaderWallet.escrowBalance,
+        } : null,
+        receiverWallet: receiverWallet ? {
+          availableBalance: receiverWallet.availableBalance,
+          escrowBalance: receiverWallet.escrowBalance,
+        } : null,
+        chatMessages: enrichedMessages,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Send message to loader dispute
+  app.post("/api/admin/loader-disputes/:id/message", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (req.user!.role !== "admin" && req.user!.role !== "dispute_admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { message } = req.body;
+      
+      const dispute = await storage.getLoaderDispute(req.params.id);
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      const newMessage = await storage.createLoaderOrderMessage({
+        orderId: dispute.orderId,
+        senderId: req.user!.userId,
+        isSystem: true,
+        isAdminMessage: true,
+        content: `[Admin]: ${message}`,
+      });
+
+      res.json(newMessage);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin: Resolve dispute
   app.post("/api/admin/loader-disputes/:id/resolve", requireAuth, async (req: AuthRequest, res) => {
     try {

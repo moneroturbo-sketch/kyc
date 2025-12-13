@@ -166,6 +166,41 @@ export default function LoaderOrderPage() {
     enabled: isAuthenticated(),
   });
 
+  const { data: feedbackData, refetch: refetchFeedback } = useQuery<FeedbackData>({
+    queryKey: ["loaderOrderFeedback", orderId],
+    queryFn: async () => {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/feedback`);
+      if (!res.ok) return { feedback: [], hasLeftFeedback: false, userFeedback: null };
+      return res.json();
+    },
+    enabled: !!orderId && order?.status === "completed",
+  });
+
+  const submitFeedbackMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetchWithAuth(`/api/loaders/orders/${orderId}/feedback`, {
+        method: "POST",
+        body: JSON.stringify({ feedbackType, comment: feedbackComment }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Feedback Submitted", description: "Thank you for your feedback!" });
+      setShowFeedbackForm(false);
+      setFeedbackType(null);
+      setFeedbackComment("");
+      refetchFeedback();
+      queryClient.invalidateQueries({ queryKey: ["loaderOrderFeedback", orderId] });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
   const terminalStatuses = ["completed", "closed_no_payment", "cancelled_auto", "cancelled_loader", "cancelled_receiver", "disputed", "resolved_loader_wins", "resolved_receiver_wins", "resolved_mutual"];
   const disputeableStatuses = ["completed", "cancelled_auto", "cancelled_loader", "cancelled_receiver"];
 
@@ -825,6 +860,138 @@ export default function LoaderOrderPage() {
               <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-2" />
               <p className="font-semibold text-green-600">Order Completed</p>
               <p className="text-sm text-muted-foreground">Fees deducted and funds released successfully.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {order.status === "completed" && !feedbackData?.hasLeftFeedback && !showFeedbackForm && (
+          <Card className="mb-4 border-primary/50">
+            <CardContent className="py-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                How was your experience with this order? Leave feedback to help other users.
+              </p>
+              <Button
+                className="w-full"
+                onClick={() => setShowFeedbackForm(true)}
+                data-testid="button-leave-feedback"
+              >
+                <Star className="h-4 w-4 mr-2" />
+                Leave Feedback
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {showFeedbackForm && (
+          <Card className="mb-4 border-primary/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Star className="h-5 w-5 text-primary" />
+                Leave Feedback
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Rate your experience with {isLoader ? order.receiverUsername : order.loaderUsername}
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant={feedbackType === "positive" ? "default" : "outline"}
+                  className={`flex-1 ${feedbackType === "positive" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                  onClick={() => setFeedbackType("positive")}
+                  data-testid="button-positive-feedback"
+                >
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Positive
+                </Button>
+                <Button
+                  variant={feedbackType === "negative" ? "default" : "outline"}
+                  className={`flex-1 ${feedbackType === "negative" ? "bg-destructive hover:bg-destructive/90" : ""}`}
+                  onClick={() => setFeedbackType("negative")}
+                  data-testid="button-negative-feedback"
+                >
+                  <ThumbsDown className="h-4 w-4 mr-2" />
+                  Negative
+                </Button>
+              </div>
+              <Textarea
+                value={feedbackComment}
+                onChange={(e) => setFeedbackComment(e.target.value)}
+                placeholder="Add a comment (optional)..."
+                data-testid="input-feedback-comment"
+              />
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1"
+                  onClick={() => submitFeedbackMutation.mutate()}
+                  disabled={!feedbackType || submitFeedbackMutation.isPending}
+                  data-testid="button-submit-feedback"
+                >
+                  {submitFeedbackMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Submit Feedback
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setShowFeedbackForm(false); setFeedbackType(null); setFeedbackComment(""); }}
+                  data-testid="button-cancel-feedback"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {feedbackData?.hasLeftFeedback && feedbackData.userFeedback && (
+          <Card className="mb-4 border-green-500/50 bg-green-500/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2 mb-2">
+                {feedbackData.userFeedback.feedbackType === "positive" ? (
+                  <ThumbsUp className="h-5 w-5 text-green-600" />
+                ) : (
+                  <ThumbsDown className="h-5 w-5 text-destructive" />
+                )}
+                <p className="font-medium">
+                  You left {feedbackData.userFeedback.feedbackType} feedback
+                </p>
+              </div>
+              {feedbackData.userFeedback.comment && (
+                <p className="text-sm text-muted-foreground">{feedbackData.userFeedback.comment}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {feedbackData?.feedback && feedbackData.feedback.length > 0 && (
+          <Card className="mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Feedback on this Order
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {feedbackData.feedback.map((fb) => (
+                <div key={fb.id} className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    {fb.feedbackType === "positive" ? (
+                      <ThumbsUp className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <ThumbsDown className="h-4 w-4 text-destructive" />
+                    )}
+                    <span className="text-sm font-medium">{fb.giverUsername}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(fb.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {fb.comment && <p className="text-sm text-muted-foreground">{fb.comment}</p>}
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
