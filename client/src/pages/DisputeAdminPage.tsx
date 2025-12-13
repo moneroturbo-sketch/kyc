@@ -453,11 +453,11 @@ export default function DisputeAdminPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Gavel className="h-8 w-8 text-orange-500" />
-          <h1 className="text-3xl font-bold text-white">Dispute Resolution Center</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dispute Resolution Center</h1>
         </div>
 
         <Tabs value={disputeTab} onValueChange={(v) => setDisputeTab(v as "marketplace" | "loaders")} className="w-full">
-          <TabsList className="bg-gray-800 border border-gray-700">
+          <TabsList className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
             <TabsTrigger value="marketplace" className="data-[state=active]:bg-orange-600" data-testid="tab-marketplace-disputes">
               Marketplace Disputes
             </TabsTrigger>
@@ -472,7 +472,7 @@ export default function DisputeAdminPage() {
               {loaderStatsLoading ? (
                 <div className="grid grid-cols-2 gap-4">
                   {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-24 bg-gray-800" />
+                    <Skeleton key={i} className="h-24 bg-gray-200 dark:bg-gray-800" />
                   ))}
                 </div>
               ) : (
@@ -482,7 +482,7 @@ export default function DisputeAdminPage() {
                       <AlertTriangle className="h-10 w-10 text-orange-400" />
                       <div>
                         <p className="text-orange-300 text-sm font-medium">Open Cases</p>
-                        <p className="text-3xl font-bold text-white">{loaderStats?.openCount || 0}</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{loaderStats?.openCount || 0}</p>
                       </div>
                     </div>
                   </div>
@@ -491,7 +491,7 @@ export default function DisputeAdminPage() {
                       <Clock className="h-10 w-10 text-yellow-400" />
                       <div>
                         <p className="text-yellow-300 text-sm font-medium">In Review</p>
-                        <p className="text-3xl font-bold text-white">{loaderStats?.inReviewCount || 0}</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{loaderStats?.inReviewCount || 0}</p>
                       </div>
                     </div>
                   </div>
@@ -500,27 +500,27 @@ export default function DisputeAdminPage() {
                       <CheckCircle className="h-10 w-10 text-green-400" />
                       <div>
                         <p className="text-green-300 text-sm font-medium">Resolved</p>
-                        <p className="text-3xl font-bold text-white">{loaderStats?.resolvedCount || 0}</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{loaderStats?.resolvedCount || 0}</p>
                       </div>
                     </div>
                   </div>
-                  <div className="p-4 bg-gray-800/80 border-2 border-gray-600 rounded-xl">
+                  <div className="p-4 bg-gray-100 dark:bg-gray-800/80 border-2 border-gray-400 dark:border-gray-600 rounded-xl">
                     <div className="flex items-center gap-3">
                       <Shield className="h-10 w-10 text-gray-400" />
                       <div>
-                        <p className="text-gray-300 text-sm font-medium">Total Cases</p>
-                        <p className="text-3xl font-bold text-white">{loaderStats?.totalCount || 0}</p>
+                        <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Total Cases</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{loaderStats?.totalCount || 0}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="bg-gray-800/50 rounded-xl p-4">
+              <div className="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-4">
                 <div className="flex gap-2 mb-6">
                   <Button
                     variant={loaderDisputeView === "open" ? "outline" : "ghost"}
-                    className={`flex items-center gap-2 ${loaderDisputeView === "open" ? "border-gray-500 bg-gray-800" : "hover:bg-gray-700"}`}
+                    className={`flex items-center gap-2 ${loaderDisputeView === "open" ? "border-gray-400 dark:border-gray-500 bg-gray-200 dark:bg-gray-800" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
                     onClick={() => { setLoaderDisputeView("open"); setSelectedLoaderDispute(null); }}
                     data-testid="button-loader-disputes-open"
                   >
@@ -529,7 +529,7 @@ export default function DisputeAdminPage() {
                   </Button>
                   <Button
                     variant={loaderDisputeView === "resolved" ? "default" : "ghost"}
-                    className={`flex items-center gap-2 ${loaderDisputeView === "resolved" ? "bg-green-600 hover:bg-green-700" : "hover:bg-gray-700"}`}
+                    className={`flex items-center gap-2 ${loaderDisputeView === "resolved" ? "bg-green-600 hover:bg-green-700" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
                     onClick={() => { setLoaderDisputeView("resolved"); setSelectedLoaderDispute(null); }}
                     data-testid="button-loader-disputes-resolved"
                   >
@@ -541,7 +541,7 @@ export default function DisputeAdminPage() {
                 {loaderDisputeView === "open" ? (
                   loaderDisputesLoading ? (
                     <div className="space-y-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-gray-700" />)}
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-gray-200 dark:bg-gray-700" />)}
                     </div>
                   ) : loaderDisputes && loaderDisputes.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -552,19 +552,19 @@ export default function DisputeAdminPage() {
                             className={`p-3 rounded-lg cursor-pointer transition-colors ${
                               selectedLoaderDispute === dispute.id
                                 ? "bg-purple-900/50 border border-purple-600"
-                                : "bg-gray-700 hover:bg-gray-600"
+                                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
                             }`}
                             onClick={() => setSelectedLoaderDispute(dispute.id)}
                             data-testid={`loader-dispute-item-${dispute.id}`}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-white font-medium text-sm">
+                              <span className="text-gray-900 dark:text-white font-medium text-sm">
                                 Order #{dispute.orderId.slice(0, 8)}
                               </span>
                               <Badge className="bg-orange-600 text-xs">{dispute.status}</Badge>
                             </div>
-                            <p className="text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
-                            <p className="text-gray-500 text-xs mt-1">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
+                            <p className="text-gray-600 dark:text-gray-500 text-xs mt-1">
                               ${dispute.order?.dealAmount || "0"} • {new Date(dispute.createdAt).toLocaleDateString()}
                             </p>
                           </div>
@@ -573,19 +573,19 @@ export default function DisputeAdminPage() {
                       
                       <div className="lg:col-span-2">
                         {!selectedLoaderDispute ? (
-                          <div className="text-center py-12 bg-gray-700/50 rounded-lg">
-                            <Gavel className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                            <p className="text-gray-400">Select a dispute to view details</p>
+                          <div className="text-center py-12 bg-gray-200 dark:bg-gray-700/50 rounded-lg">
+                            <Gavel className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                            <p className="text-gray-600 dark:text-gray-400">Select a dispute to view details</p>
                           </div>
                         ) : loaderDetailsLoading ? (
                           <div className="space-y-4">
-                            <Skeleton className="h-32 bg-gray-700" />
-                            <Skeleton className="h-64 bg-gray-700" />
+                            <Skeleton className="h-32 bg-gray-200 dark:bg-gray-700" />
+                            <Skeleton className="h-64 bg-gray-200 dark:bg-gray-700" />
                           </div>
                         ) : loaderDisputeDetails ? (
-                          <div className="space-y-4 bg-gray-700/50 rounded-lg p-4">
+                          <div className="space-y-4 bg-gray-200 dark:bg-gray-700/50 rounded-lg p-4">
                             <div className="grid grid-cols-2 gap-4">
-                              <div className="p-3 bg-gray-800 rounded-lg">
+                              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
                                   <p className="text-gray-400 text-sm flex items-center gap-1">
                                     <User className="h-4 w-4" /> Loader
@@ -594,7 +594,7 @@ export default function DisputeAdminPage() {
                                     <Badge className="bg-red-600 text-xs">Frozen</Badge>
                                   )}
                                 </div>
-                                <p className="text-white font-bold">{loaderDisputeDetails.loader?.username || "Unknown"}</p>
+                                <p className="text-gray-900 dark:text-white font-bold">{loaderDisputeDetails.loader?.username || "Unknown"}</p>
                                 {loaderDisputeDetails.loaderWallet && (
                                   <p className="text-gray-400 text-xs mt-1">
                                     Bal: ${parseFloat(loaderDisputeDetails.loaderWallet.availableBalance).toFixed(2)} | Esc: ${parseFloat(loaderDisputeDetails.loaderWallet.escrowBalance).toFixed(2)}
@@ -611,7 +611,7 @@ export default function DisputeAdminPage() {
                                   )}
                                 </div>
                               </div>
-                              <div className="p-3 bg-gray-800 rounded-lg">
+                              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
                                   <p className="text-gray-400 text-sm flex items-center gap-1">
                                     <User className="h-4 w-4" /> Receiver
@@ -620,7 +620,7 @@ export default function DisputeAdminPage() {
                                     <Badge className="bg-red-600 text-xs">Frozen</Badge>
                                   )}
                                 </div>
-                                <p className="text-white font-bold">{loaderDisputeDetails.receiver?.username || "Unknown"}</p>
+                                <p className="text-gray-900 dark:text-white font-bold">{loaderDisputeDetails.receiver?.username || "Unknown"}</p>
                                 {loaderDisputeDetails.receiverWallet && (
                                   <p className="text-gray-400 text-xs mt-1">
                                     Bal: ${parseFloat(loaderDisputeDetails.receiverWallet.availableBalance).toFixed(2)} | Esc: ${parseFloat(loaderDisputeDetails.receiverWallet.escrowBalance).toFixed(2)}
@@ -641,13 +641,13 @@ export default function DisputeAdminPage() {
                             <div className="p-3 bg-purple-900/30 border border-purple-700 rounded-lg">
                               <p className="text-purple-300 text-sm font-medium mb-1">Dispute Reason</p>
                               <p className="text-white text-sm">{loaderDisputeDetails.dispute.reason}</p>
-                              <p className="text-gray-400 text-xs mt-2">Deal: <span className="text-white font-bold">${parseFloat(loaderDisputeDetails.order.dealAmount).toFixed(2)}</span></p>
+                              <p className="text-gray-400 text-xs mt-2">Deal: <span className="text-gray-900 dark:text-white font-bold">${parseFloat(loaderDisputeDetails.order.dealAmount).toFixed(2)}</span></p>
                             </div>
-                            <div className="bg-gray-800 rounded-lg p-3">
-                              <p className="text-white font-medium mb-2 flex items-center gap-2 text-sm">
+                            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                              <p className="text-gray-900 dark:text-white font-medium mb-2 flex items-center gap-2 text-sm">
                                 <MessageCircle className="h-4 w-4" /> Chat History
                               </p>
-                              <div className="h-32 overflow-y-auto space-y-2 mb-3 p-2 bg-gray-900 rounded">
+                              <div className="h-32 overflow-y-auto space-y-2 mb-3 p-2 bg-gray-200 dark:bg-gray-900 rounded">
                                 {loaderDisputeDetails.chatMessages.length > 0 ? (
                                   loaderDisputeDetails.chatMessages.map((msg) => {
                                     const isAdmin = msg.senderRole === "admin" || msg.senderRole === "dispute_admin";
@@ -668,12 +668,12 @@ export default function DisputeAdminPage() {
                                 ) : <p className="text-gray-500 text-center py-2 text-xs">No messages</p>}
                               </div>
                               <form onSubmit={(e) => { e.preventDefault(); if (newLoaderMessage.trim()) sendLoaderMessageMutation.mutate(newLoaderMessage); }} className="flex gap-2">
-                                <Input placeholder="Send message..." className="flex-1 bg-gray-700 border-gray-600 text-white text-sm" value={newLoaderMessage} onChange={(e) => setNewLoaderMessage(e.target.value)} data-testid="input-loader-admin-message" />
+                                <Input placeholder="Send message..." className="flex-1 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm" value={newLoaderMessage} onChange={(e) => setNewLoaderMessage(e.target.value)} data-testid="input-loader-admin-message" />
                                 <Button type="submit" size="sm" className="bg-purple-600 hover:bg-purple-700" disabled={!newLoaderMessage.trim() || sendLoaderMessageMutation.isPending} data-testid="button-send-loader-admin-message"><Send className="h-4 w-4" /></Button>
                               </form>
                             </div>
                             <div className="space-y-2">
-                              <Textarea placeholder="Resolution notes..." className="bg-gray-700 border-gray-600 text-white text-sm" value={loaderResolution} onChange={(e) => setLoaderResolution(e.target.value)} rows={2} data-testid="input-loader-resolution" />
+                              <Textarea placeholder="Resolution notes..." className="bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm" value={loaderResolution} onChange={(e) => setLoaderResolution(e.target.value)} rows={2} data-testid="input-loader-resolution" />
                               <div className="flex gap-2">
                                 <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => resolveLoaderDisputeMutation.mutate({ disputeId: selectedLoaderDispute, winner: "loader", resolution: loaderResolution })} disabled={!loaderResolution.trim() || resolveLoaderDisputeMutation.isPending} data-testid="button-resolve-loader-wins">
                                   <DollarSign className="h-3 w-3 mr-1" /> Loader Wins
@@ -690,25 +690,25 @@ export default function DisputeAdminPage() {
                     </div>
                   ) : (
                     <div className="text-center py-16">
-                      <Shield className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                      <p className="text-gray-400 text-lg">No open disputes</p>
+                      <Shield className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">No open disputes</p>
                     </div>
                   )
                 ) : (
                   resolvedLoaderLoading ? (
                     <div className="space-y-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-gray-700" />)}
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-gray-200 dark:bg-gray-700" />)}
                     </div>
                   ) : resolvedLoaderDisputes && resolvedLoaderDisputes.length > 0 ? (
                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
                       {resolvedLoaderDisputes.map((dispute: any) => (
                         <div key={dispute.id} className="p-3 rounded-lg bg-gray-700" data-testid={`loader-resolved-dispute-${dispute.id}`}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-white font-medium text-sm">Order #{dispute.orderId.slice(0, 8)}</span>
+                            <span className="text-gray-900 dark:text-white font-medium text-sm">Order #{dispute.orderId.slice(0, 8)}</span>
                             <Badge className="bg-green-600 text-xs">{dispute.status}</Badge>
                           </div>
-                          <p className="text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
-                          <p className="text-gray-500 text-xs mt-1">
+                          <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
+                          <p className="text-gray-600 dark:text-gray-500 text-xs mt-1">
                             ${dispute.order?.dealAmount || "0"} • Resolved: {dispute.resolvedAt ? new Date(dispute.resolvedAt).toLocaleDateString() : "N/A"}
                             {dispute.resolverName && ` by ${dispute.resolverName}`}
                           </p>
@@ -717,8 +717,8 @@ export default function DisputeAdminPage() {
                     </div>
                   ) : (
                     <div className="text-center py-16">
-                      <Shield className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                      <p className="text-gray-400 text-lg">No resolved disputes</p>
+                      <Shield className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">No resolved disputes</p>
                     </div>
                   )
                 )}
@@ -730,7 +730,7 @@ export default function DisputeAdminPage() {
         {statsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24 bg-gray-800" />
+              <Skeleton key={i} className="h-24 bg-gray-200 dark:bg-gray-800" />
             ))}
           </div>
         ) : (
@@ -762,7 +762,7 @@ export default function DisputeAdminPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700">
               <CardContent className="p-4 flex items-center gap-3">
                 <Shield className="h-8 w-8 text-gray-400" />
                 <div>
@@ -775,7 +775,7 @@ export default function DisputeAdminPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="bg-gray-900/50 border-gray-800 lg:col-span-1">
+          <Card className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 lg:col-span-1">
             <CardHeader>
               <div className="flex gap-2 mb-2">
                 <Button
@@ -805,7 +805,7 @@ export default function DisputeAdminPage() {
                 disputesLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 bg-gray-800" />
+                      <Skeleton key={i} className="h-20 bg-gray-200 dark:bg-gray-800" />
                     ))}
                   </div>
                 ) : disputes && disputes.length > 0 ? (
@@ -816,21 +816,21 @@ export default function DisputeAdminPage() {
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
                           selectedDispute === dispute.id
                             ? "bg-orange-900/50 border border-orange-600"
-                            : "bg-gray-800 hover:bg-gray-700"
+                            : "bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700"
                         }`}
                         onClick={() => setSelectedDispute(dispute.id)}
                         data-testid={`dispute-item-${dispute.id}`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-white font-medium text-sm">
+                          <span className="text-gray-900 dark:text-white font-medium text-sm">
                             Order #{dispute.orderId.slice(0, 8)}
                           </span>
                           <Badge className="bg-orange-600 text-xs">
                             {dispute.status === "open" ? "Open" : "In Review"}
                           </Badge>
                         </div>
-                        <p className="text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
-                        <p className="text-gray-500 text-xs mt-1">
+                        <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{dispute.reason}</p>
+                        <p className="text-gray-600 dark:text-gray-500 text-xs mt-1">
                           {new Date(dispute.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -846,7 +846,7 @@ export default function DisputeAdminPage() {
                 resolvedLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 bg-gray-800" />
+                      <Skeleton key={i} className="h-20 bg-gray-200 dark:bg-gray-800" />
                     ))}
                   </div>
                 ) : resolvedDisputes && resolvedDisputes.length > 0 ? (
@@ -857,20 +857,20 @@ export default function DisputeAdminPage() {
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
                           selectedDispute === dispute.id
                             ? "bg-green-900/50 border border-green-600"
-                            : "bg-gray-800 hover:bg-gray-700"
+                            : "bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700"
                         }`}
                         onClick={() => setSelectedDispute(dispute.id)}
                         data-testid={`resolved-dispute-item-${dispute.id}`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-white font-medium text-sm">
+                          <span className="text-gray-900 dark:text-white font-medium text-sm">
                             Order #{dispute.orderId.slice(0, 8)}
                           </span>
                           <Badge className={dispute.status === "resolved_refund" ? "bg-blue-600 text-xs" : "bg-green-600 text-xs"}>
                             {dispute.status === "resolved_refund" ? "Refunded" : "Released"}
                           </Badge>
                         </div>
-                        <p className="text-gray-400 text-sm line-clamp-2">{dispute.resolution || dispute.reason}</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{dispute.resolution || dispute.reason}</p>
                         <div className="flex justify-between items-center mt-1">
                           <p className="text-gray-500 text-xs">
                             {dispute.resolvedAt ? new Date(dispute.resolvedAt).toLocaleDateString() : ""}
@@ -895,9 +895,9 @@ export default function DisputeAdminPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-900/50 border-gray-800 lg:col-span-2">
+          <Card className="bg-white dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
                 <Eye className="h-5 w-5 text-purple-400" />
                 Dispute Details
               </CardTitle>
@@ -906,17 +906,17 @@ export default function DisputeAdminPage() {
               {!selectedDispute ? (
                 <div className="text-center py-12">
                   <Gavel className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400">Select a dispute to view details</p>
+                  <p className="text-gray-600 dark:text-gray-400">Select a dispute to view details</p>
                 </div>
               ) : detailsLoading ? (
                 <div className="space-y-4">
-                  <Skeleton className="h-32 bg-gray-800" />
-                  <Skeleton className="h-64 bg-gray-800" />
+                  <Skeleton className="h-32 bg-gray-200 dark:bg-gray-800" />
+                  <Skeleton className="h-64 bg-gray-200 dark:bg-gray-800" />
                 </div>
               ) : disputeDetails ? (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-gray-400 text-sm flex items-center gap-1">
                           <User className="h-4 w-4" /> Buyer
@@ -925,7 +925,7 @@ export default function DisputeAdminPage() {
                           <Badge className="bg-red-600 text-xs">Frozen</Badge>
                         ) : null}
                       </div>
-                      <p className="text-white font-bold">{disputeDetails.buyer?.username || "Unknown"}</p>
+                      <p className="text-gray-900 dark:text-white font-bold">{disputeDetails.buyer?.username || "Unknown"}</p>
                       {disputeDetails.buyerWallet && (
                         <p className="text-gray-400 text-sm mt-1">
                           Balance: ${parseFloat(disputeDetails.buyerWallet.availableBalance).toFixed(2)} | 
@@ -955,7 +955,7 @@ export default function DisputeAdminPage() {
                         )}
                       </div>
                     </div>
-                    <div className="p-4 bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-gray-400 text-sm flex items-center gap-1">
                           <User className="h-4 w-4" /> Seller
@@ -964,7 +964,7 @@ export default function DisputeAdminPage() {
                           <Badge className="bg-red-600 text-xs">Frozen</Badge>
                         ) : null}
                       </div>
-                      <p className="text-white font-bold">{disputeDetails.seller?.username || "Unknown"}</p>
+                      <p className="text-gray-900 dark:text-white font-bold">{disputeDetails.seller?.username || "Unknown"}</p>
                       {disputeDetails.sellerWallet && (
                         <p className="text-gray-400 text-sm mt-1">
                           Balance: ${parseFloat(disputeDetails.sellerWallet.availableBalance).toFixed(2)} | 
@@ -1000,15 +1000,15 @@ export default function DisputeAdminPage() {
                     <p className="text-orange-300 text-sm font-medium mb-1">Dispute Reason</p>
                     <p className="text-white">{disputeDetails.dispute.reason}</p>
                     <p className="text-gray-400 text-sm mt-2">
-                      Amount in dispute: <span className="text-white font-bold">${parseFloat(disputeDetails.order.fiatAmount).toFixed(2)}</span>
+                      Amount in dispute: <span className="text-gray-900 dark:text-white font-bold">${parseFloat(disputeDetails.order.fiatAmount).toFixed(2)}</span>
                     </p>
                   </div>
 
                   <div className="bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-white font-medium mb-3 flex items-center gap-2">
+                    <p className="text-gray-900 dark:text-white font-medium mb-3 flex items-center gap-2">
                       <MessageCircle className="h-4 w-4" /> Order Chat History
                     </p>
-                    <div className="h-48 overflow-y-auto space-y-2 mb-4 p-2 bg-gray-900 rounded">
+                    <div className="h-48 overflow-y-auto space-y-2 mb-4 p-2 bg-gray-200 dark:bg-gray-900 rounded">
                       {disputeDetails.chatMessages.length > 0 ? (
                         disputeDetails.chatMessages.map((msg) => {
                           const isAdmin = msg.senderRole === "admin" || msg.senderRole === "dispute_admin";
@@ -1047,7 +1047,7 @@ export default function DisputeAdminPage() {
                     <form onSubmit={handleSendMessage} className="flex gap-2">
                       <Input
                         placeholder="Send a message to both parties..."
-                        className="flex-1 bg-gray-800 border-gray-700 text-white"
+                        className="flex-1 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         data-testid="input-admin-message"
@@ -1066,13 +1066,13 @@ export default function DisputeAdminPage() {
                   <div className="space-y-3">
                     <Textarea
                       placeholder="Resolution notes (required)..."
-                      className="bg-gray-800 border-gray-700 text-white"
+                      className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white"
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value)}
                       data-testid="input-resolution"
                     />
                     
-                    <div className="p-3 bg-gray-800 rounded-lg space-y-2">
+                    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg space-y-2">
                       <label className="text-gray-300 text-sm">
                         Release Amount (optional - leave empty for full amount)
                       </label>
@@ -1081,7 +1081,7 @@ export default function DisputeAdminPage() {
                         <Input
                           type="number"
                           placeholder={`Max: ${parseFloat(disputeDetails.order.escrowAmount || disputeDetails.order.fiatAmount).toFixed(2)}`}
-                          className="bg-gray-700 border-gray-600 text-white"
+                          className="bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                           value={releaseAmount}
                           onChange={(e) => {
                             const max = parseFloat(disputeDetails.order.escrowAmount || disputeDetails.order.fiatAmount);
@@ -1137,9 +1137,9 @@ export default function DisputeAdminPage() {
         </Tabs>
 
         <Dialog open={showFreezeDialog} onOpenChange={setShowFreezeDialog}>
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
+              <DialogTitle className="text-gray-900 dark:text-white flex items-center gap-2">
                 <Ban className="h-5 w-5 text-red-400" />
                 Freeze Account
               </DialogTitle>
@@ -1150,7 +1150,7 @@ export default function DisputeAdminPage() {
             <div className="space-y-4 pt-4">
               <Textarea
                 placeholder="Reason for freezing account (e.g., Suspected scam activity, Under investigation...)"
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white"
                 value={freezeReason}
                 onChange={(e) => setFreezeReason(e.target.value)}
                 data-testid="input-freeze-reason"
@@ -1192,9 +1192,9 @@ export default function DisputeAdminPage() {
             setPendingResolveStatus(null);
           }
         }}>
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
+              <DialogTitle className="text-gray-900 dark:text-white flex items-center gap-2">
                 <Shield className="h-5 w-5 text-green-400" />
                 Confirm with 2FA
               </DialogTitle>
@@ -1208,7 +1208,7 @@ export default function DisputeAdminPage() {
             <div className="space-y-4 pt-4">
               <Input
                 placeholder="Enter 6-digit code"
-                className="bg-gray-800 border-gray-700 text-white text-center text-lg tracking-widest"
+                className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-center text-lg tracking-widest"
                 value={twoFactorToken}
                 onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 maxLength={6}
@@ -1241,9 +1241,9 @@ export default function DisputeAdminPage() {
         </Dialog>
 
         <Dialog open={showLoaderFreezeDialog} onOpenChange={setShowLoaderFreezeDialog}>
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
+              <DialogTitle className="text-gray-900 dark:text-white flex items-center gap-2">
                 <Ban className="h-5 w-5 text-red-400" />
                 Freeze Account
               </DialogTitle>
@@ -1254,7 +1254,7 @@ export default function DisputeAdminPage() {
             <div className="space-y-4 pt-4">
               <Textarea
                 placeholder="Reason for freezing account (e.g., Suspected scam activity, Under investigation...)"
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white"
                 value={loaderFreezeReason}
                 onChange={(e) => setLoaderFreezeReason(e.target.value)}
                 data-testid="input-loader-freeze-reason"
