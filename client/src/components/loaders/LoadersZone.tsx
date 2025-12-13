@@ -141,7 +141,11 @@ export default function LoadersZone() {
     queryKey: ["loaderAds"],
     queryFn: async () => {
       const res = await fetch("/api/loaders/ads");
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) {
+        return [];
+      }
+      return data;
     },
     enabled: activeTab === "active",
   });
@@ -150,7 +154,11 @@ export default function LoadersZone() {
     queryKey: ["myLoaderAds"],
     queryFn: async () => {
       const res = await fetchWithAuth("/api/loaders/my-ads");
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) {
+        return [];
+      }
+      return data;
     },
     enabled: isAuthenticated() && activeTab === "post",
   });
@@ -159,7 +167,11 @@ export default function LoadersZone() {
     queryKey: ["myLoaderOrders"],
     queryFn: async () => {
       const res = await fetchWithAuth("/api/loaders/my-orders");
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) {
+        return [];
+      }
+      return data;
     },
     enabled: isAuthenticated() && activeTab === "orders",
   });
