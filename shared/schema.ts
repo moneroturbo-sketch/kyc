@@ -15,7 +15,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["admin", "vendor", "customer", "support", "dispute_admin"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "vendor", "customer", "support", "dispute_admin", "finance_manager"]);
 export const kycStatusEnum = pgEnum("kyc_status", ["pending", "approved", "rejected", "resubmit"]);
 export const kycTierEnum = pgEnum("kyc_tier", ["tier0", "tier1", "tier2"]);
 export const tradeIntentEnum = pgEnum("trade_intent", ["sell_ad", "buy_ad"]);
@@ -24,7 +24,7 @@ export const disputeStatusEnum = pgEnum("dispute_status", ["open", "in_review", 
 export const transactionTypeEnum = pgEnum("transaction_type", ["deposit", "withdraw", "escrow_hold", "escrow_release", "fee", "refund"]);
 export const subscriptionPlanEnum = pgEnum("subscription_plan", ["free", "basic", "pro", "featured"]);
 export const notificationTypeEnum = pgEnum("notification_type", ["order", "payment", "escrow", "dispute", "kyc", "vendor", "wallet", "system"]);
-export const maintenanceModeEnum = pgEnum("maintenance_mode", ["none", "partial", "full"]);
+export const maintenanceModeEnum = pgEnum("maintenance_mode", ["none", "full", "financial", "trading", "readonly"]);
 
 // Loader Zone Enums
 export const countdownTimeEnum = pgEnum("countdown_time", [
@@ -286,8 +286,31 @@ export const maintenanceSettings = pgTable("maintenance_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mode: maintenanceModeEnum("mode").notNull().default("none"),
   message: text("message"),
+  customReason: text("custom_reason"),
+  expectedDowntime: text("expected_downtime"),
+  depositsEnabled: boolean("deposits_enabled").notNull().default(true),
+  withdrawalsEnabled: boolean("withdrawals_enabled").notNull().default(true),
+  tradingEnabled: boolean("trading_enabled").notNull().default(true),
+  loginEnabled: boolean("login_enabled").notNull().default(true),
   updatedBy: varchar("updated_by").references(() => users.id),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Withdrawal Requests Table
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  walletId: varchar("wallet_id").notNull().references(() => wallets.id),
+  amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  currency: text("currency").notNull().default("USDT"),
+  status: text("status").notNull().default("pending"),
+  walletAddress: text("wallet_address"),
+  network: text("network"),
+  txHash: text("tx_hash"),
+  adminNotes: text("admin_notes"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
 // Theme Settings Table
@@ -719,6 +742,18 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 
 export type MaintenanceSettings = typeof maintenanceSettings.$inferSelect;
 export type ThemeSettings = typeof themeSettings.$inferSelect;
+
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  adminNotes: true,
+  txHash: true,
+});
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
 
 export const insertExchangeSchema = createInsertSchema(exchanges).omit({
   id: true,

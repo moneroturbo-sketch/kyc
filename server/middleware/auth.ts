@@ -59,3 +59,19 @@ export function requireDisputeAdmin(
 ): void {
   return requireRole("admin", "dispute_admin")(req, res, next);
 }
+
+export function requireFinanceManager(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  return requireRole("admin", "finance_manager")(req, res, next);
+}
+
+export function requireSupport(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  return requireRole("admin", "support")(req, res, next);
+}
