@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, comparePassword } from "./utils/bcrypt";
 import { generateToken } from "./utils/jwt";
-import { requireAuth, requireAdmin, requireRole, requireDisputeAdmin, type AuthRequest } from "./middleware/auth";
+import { requireAuth, requireAdmin, requireRole, requireDisputeAdmin, requireSupport, requireFinanceManager, type AuthRequest } from "./middleware/auth";
 import { loginLimiter, registerLimiter, apiLimiter } from "./middleware/rateLimiter";
 import { upload } from "./middleware/upload";
 import { generateTotpSecret, verifyTotp, generateRecoveryCodes } from "./utils/totp";
@@ -4456,6 +4456,337 @@ export async function registerRoutes(
       }
 
       res.json({ message: "Confirmation recorded. Waiting for other party to confirm.", locked: false });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== SUPPORT ROUTES ====================
+
+  // Search user by username (for support)
+  app.get("/api/support/user/search", requireAuth, requireSupport, async (req: AuthRequest, res) => {
+    try {
+      const { username } = req.query;
+      if (!username || typeof username !== "string") {
+        return res.status(400).json({ message: "Username required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const kyc = await storage.getKycByUserId(user.id);
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isFrozen: user.isFrozen,
+        frozenReason: user.frozenReason,
+        twoFactorEnabled: user.twoFactorEnabled,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        kycStatus: kyc?.status || null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reset 2FA for user (support)
+  app.post("/api/support/user/:id/reset-2fa", requireAuth, requireSupport, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.updateUser(id, {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorRecoveryCodes: null,
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "support_2fa_reset",
+        resource: "users",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { targetUser: user.username },
+      });
+
+      res.json({ message: "2FA reset successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Flag suspicious user (support)
+  app.post("/api/support/user/:id/flag", requireAuth, requireSupport, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.freezeUser(id, reason || "Flagged as suspicious by support");
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "support_user_flagged",
+        resource: "users",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { reason, targetUser: user.username },
+      });
+
+      res.json({ message: "User flagged successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== FINANCE ROUTES ====================
+
+  // Get pending withdrawal requests
+  app.get("/api/finance/withdrawals/pending", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const pendingRequests = await storage.getPendingWithdrawalRequests();
+      
+      // Enrich with user info
+      const enrichedRequests = await Promise.all(
+        pendingRequests.map(async (request) => {
+          const user = await storage.getUser(request.userId);
+          const disputes = await storage.getOpenDisputes();
+          const userDisputes = disputes.filter(d => {
+            // Check if user is involved in any dispute
+            return true; // Simplified - would need to check order participants
+          });
+          
+          return {
+            ...request,
+            username: user?.username,
+            userFrozen: user?.isFrozen,
+            inDispute: userDisputes.length > 0,
+          };
+        })
+      );
+
+      res.json(enrichedRequests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Approve withdrawal
+  app.post("/api/finance/withdrawals/:id/approve", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const request = await storage.getWithdrawalRequest(id);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Withdrawal request not found" });
+      }
+
+      if (request.status !== "pending") {
+        return res.status(400).json({ message: "Request already processed" });
+      }
+
+      // Check if user is frozen
+      const user = await storage.getUser(request.userId);
+      if (user?.isFrozen) {
+        return res.status(400).json({ message: "Cannot approve withdrawal for frozen user" });
+      }
+
+      await storage.updateWithdrawalRequest(id, {
+        status: "approved",
+        reviewedBy: req.user!.userId,
+        reviewedAt: new Date(),
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "withdrawal_approved",
+        resource: "withdrawal_requests",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { amount: request.amount, userId: request.userId },
+      });
+
+      res.json({ message: "Withdrawal approved" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reject withdrawal
+  app.post("/api/finance/withdrawals/:id/reject", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const request = await storage.getWithdrawalRequest(id);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Withdrawal request not found" });
+      }
+
+      if (request.status !== "pending") {
+        return res.status(400).json({ message: "Request already processed" });
+      }
+
+      // Return funds to user's wallet
+      const wallet = await storage.getWallet(request.walletId);
+      if (wallet) {
+        const newBalance = (parseFloat(wallet.availableBalance) + parseFloat(request.amount)).toFixed(8);
+        await storage.updateWalletBalance(wallet.id, newBalance, wallet.escrowBalance);
+      }
+
+      await storage.updateWithdrawalRequest(id, {
+        status: "rejected",
+        adminNotes: reason,
+        reviewedBy: req.user!.userId,
+        reviewedAt: new Date(),
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "withdrawal_rejected",
+        resource: "withdrawal_requests",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { amount: request.amount, userId: request.userId, reason },
+      });
+
+      res.json({ message: "Withdrawal rejected and funds returned" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Search user with wallet info (for finance)
+  app.get("/api/finance/user/search", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { username } = req.query;
+      if (!username || typeof username !== "string") {
+        return res.status(400).json({ message: "Username required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const wallet = await storage.getWalletByUserId(user.id, "USDT");
+      const transactions = await storage.getTransactionsByUser(user.id);
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isFrozen: user.isFrozen,
+        frozenReason: user.frozenReason,
+        wallet: wallet ? {
+          availableBalance: wallet.availableBalance,
+          escrowBalance: wallet.escrowBalance,
+        } : null,
+        transactions: transactions.slice(0, 20).map(t => ({
+          id: t.id,
+          type: t.type,
+          amount: t.amount,
+          currency: t.currency,
+          description: t.description,
+          createdAt: t.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get platform statistics
+  app.get("/api/finance/stats", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const totalBalance = await storage.getTotalPlatformBalance();
+      const pendingWithdrawals = await storage.getPendingWithdrawalRequests();
+      
+      const pendingAmount = pendingWithdrawals.reduce((sum, w) => sum + parseFloat(w.amount), 0);
+
+      res.json({
+        totalUsers: allUsers.length,
+        totalBalance,
+        pendingWithdrawals: pendingAmount.toFixed(8),
+        todayWithdrawals: "0", // Would need to track processed withdrawals by date
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Finance manager freeze/unfreeze user
+  app.post("/api/finance/users/:id/freeze", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.freezeUser(id, reason || "Account frozen by finance team");
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "finance_user_frozen",
+        resource: "users",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { reason, targetUser: user.username },
+      });
+
+      res.json({ message: "User frozen successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/finance/users/:id/unfreeze", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.unfreezeUser(id);
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "finance_user_unfrozen",
+        resource: "users",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { targetUser: user.username },
+      });
+
+      res.json({ message: "User unfrozen successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

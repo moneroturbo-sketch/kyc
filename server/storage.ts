@@ -16,6 +16,7 @@ import {
   auditLogs,
   maintenanceSettings,
   themeSettings,
+  withdrawalRequests,
   exchanges,
   socialPosts,
   socialComments,
@@ -56,6 +57,8 @@ import {
   type InsertAuditLog,
   type MaintenanceSettings,
   type ThemeSettings,
+  type WithdrawalRequest,
+  type InsertWithdrawalRequest,
   type Exchange,
   type InsertExchange,
   type SocialPost,
@@ -264,6 +267,17 @@ export interface IStorage {
   createLoaderStats(stats: InsertLoaderStats): Promise<LoaderStats>;
   updateLoaderStats(userId: string, updates: Partial<LoaderStats>): Promise<LoaderStats | undefined>;
   getOrCreateLoaderStats(userId: string): Promise<LoaderStats>;
+
+  // Withdrawal Requests
+  getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined>;
+  getPendingWithdrawalRequests(): Promise<WithdrawalRequest[]>;
+  createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  updateWithdrawalRequest(id: string, updates: Partial<WithdrawalRequest>): Promise<WithdrawalRequest | undefined>;
+  
+  // User search and stats
+  searchUsersByUsername(username: string): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
+  getTotalPlatformBalance(): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1286,6 +1300,55 @@ export class DatabaseStorage implements IStorage {
       stats = await this.createLoaderStats({ userId });
     }
     return stats;
+  }
+
+  // Withdrawal Requests
+  async getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined> {
+    const [request] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, id));
+    return request || undefined;
+  }
+
+  async getPendingWithdrawalRequests(): Promise<WithdrawalRequest[]> {
+    return await db
+      .select()
+      .from(withdrawalRequests)
+      .where(eq(withdrawalRequests.status, "pending"))
+      .orderBy(desc(withdrawalRequests.createdAt));
+  }
+
+  async createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest> {
+    const [newRequest] = await db.insert(withdrawalRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async updateWithdrawalRequest(id: string, updates: Partial<WithdrawalRequest>): Promise<WithdrawalRequest | undefined> {
+    const [request] = await db
+      .update(withdrawalRequests)
+      .set(updates)
+      .where(eq(withdrawalRequests.id, id))
+      .returning();
+    return request || undefined;
+  }
+
+  // User search and stats
+  async searchUsersByUsername(username: string): Promise<User[]> {
+    const searchTerm = `%${username.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(users)
+      .where(like(sql`LOWER(${users.username})`, searchTerm))
+      .limit(10);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getTotalPlatformBalance(): Promise<string> {
+    const result = await db
+      .select({ total: sql<string>`COALESCE(SUM(${wallets.availableBalance}::numeric + ${wallets.escrowBalance}::numeric), 0)` })
+      .from(wallets);
+    return result[0]?.total || "0";
   }
 }
 
