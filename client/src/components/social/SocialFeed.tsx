@@ -16,6 +16,7 @@ import {
   BadgeCheck,
   Search,
   X,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -228,35 +229,37 @@ function CommentCard({
   const canDelete = isAuthor || isAdmin;
 
   return (
-    <div className="flex gap-3 py-3 border-b border-border last:border-0" data-testid={`comment-${comment.id}`}>
+    <div className="group flex gap-3 p-3 rounded-lg hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0" data-testid={`comment-${comment.id}`}>
       <SmallAuthorAvatar author={comment.author} />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          <span className="font-medium text-sm text-foreground">
-            {comment.author.username}
-          </span>
-          {comment.author.isVerifiedVendor && (
-            <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm text-foreground">
+              {comment.author.username}
+            </span>
+            {comment.author.isVerifiedVendor && (
+              <BadgeCheck className="h-4 w-4 text-primary" />
+            )}
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+            </span>
+          </div>
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              onClick={onDelete}
+              data-testid={`delete-comment-${comment.id}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           )}
-          <span className="text-xs text-muted-foreground">
-            · {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-          </span>
         </div>
-        <p className="text-sm text-foreground mt-0.5">
+        <p className="text-sm text-foreground mt-1.5 leading-relaxed">
           {renderContentWithMentions(comment.content)}
         </p>
       </div>
-      {canDelete && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0"
-          onClick={onDelete}
-          data-testid={`delete-comment-${comment.id}`}
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      )}
     </div>
   );
 }
@@ -553,65 +556,85 @@ export default function SocialFeed() {
       )}
 
       <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Comments</DialogTitle>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Comments
+            </DialogTitle>
           </DialogHeader>
           
           {selectedPost && (
-            <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-              <div className="bg-muted/30 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="px-6 py-4 bg-gradient-to-br from-muted/30 to-muted/10 border-b">
+                <div className="flex items-center gap-3 mb-3">
                   <SmallAuthorAvatar author={selectedPost.author} />
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium text-sm">
-                      {selectedPost.author.username}
-                    </span>
-                    {selectedPost.author.isVerifiedVendor && (
-                      <BadgeCheck className="h-3.5 w-3.5 text-primary" />
-                    )}
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm">
+                        {selectedPost.author.username}
+                      </span>
+                      {selectedPost.author.isVerifiedVendor && (
+                        <BadgeCheck className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">Original post</span>
                   </div>
                 </div>
-                <p className="text-sm">{renderContentWithMentions(selectedPost.content)}</p>
+                <p className="text-sm leading-relaxed">{renderContentWithMentions(selectedPost.content)}</p>
               </div>
 
-              <ScrollArea className="flex-1">
-                <div className="pr-4">
+              <ScrollArea className="flex-1 px-3">
+                <div className="py-2">
                   {comments && comments.length > 0 ? (
-                    comments.map((comment) => (
-                      <CommentCard
-                        key={comment.id}
-                        comment={comment}
-                        onDelete={() => deleteCommentMutation.mutate(comment.id)}
-                      />
-                    ))
+                    <div className="space-y-1">
+                      {comments.map((comment) => (
+                        <CommentCard
+                          key={comment.id}
+                          comment={comment}
+                          onDelete={() => deleteCommentMutation.mutate(comment.id)}
+                        />
+                      ))}
+                    </div>
                   ) : (
-                    <p className="text-center text-sm text-muted-foreground py-4">
-                      No comments yet
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                      <p className="text-sm font-medium text-muted-foreground">No comments yet</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Be the first to share your thoughts</p>
+                    </div>
                   )}
                 </div>
               </ScrollArea>
 
               {isAuthenticated() && (
-                <div className="flex gap-2 pt-2 border-t">
-                  <Textarea
-                    placeholder="Write a comment..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    maxLength={500}
-                    className="min-h-[60px] resize-none flex-1"
-                    data-testid="comment-input"
-                  />
-                  <Button
-                    onClick={handleSubmitComment}
-                    disabled={!commentText.trim() || createCommentMutation.isPending}
-                    size="icon"
-                    className="self-end"
-                    data-testid="submit-comment-btn"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="px-6 py-4 border-t bg-muted/20">
+                  <div className="flex gap-3">
+                    <Textarea
+                      placeholder="Share your thoughts..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      maxLength={500}
+                      className="min-h-[80px] resize-none flex-1 bg-background border-muted-foreground/20 focus:border-primary"
+                      data-testid="comment-input"
+                    />
+                    <div className="flex flex-col justify-end gap-2">
+                      <span className="text-xs text-muted-foreground text-right">{commentText.length}/500</span>
+                      <Button
+                        onClick={handleSubmitComment}
+                        disabled={!commentText.trim() || createCommentMutation.isPending}
+                        size="default"
+                        className="gap-2"
+                        data-testid="submit-comment-btn"
+                      >
+                        {createCommentMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        Post
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

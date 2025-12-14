@@ -654,7 +654,13 @@ export default function LoaderOrderPage() {
                     <p className="text-sm text-muted-foreground">
                       {order.liabilityType === "full_payment" && "Full Payment - Pay full amount even if assets are frozen"}
                       {order.liabilityType?.startsWith("partial_") && `Partial Payment - ${order.liabilityType.split("_")[1]}% if assets are frozen`}
-                      {order.liabilityType?.startsWith("time_bound_") && `Time-Bound - Wait ${order.liabilityType.replace("time_bound_", "").replace("h", " hours").replace("week", " week").replace("month", " month")}`}
+                      {order.liabilityType?.startsWith("time_bound_") && `Time-Bound - Wait ${
+                        order.liabilityType === "time_bound_24h" ? "24 hours" :
+                        order.liabilityType === "time_bound_48h" ? "48 hours" :
+                        order.liabilityType === "time_bound_72h" ? "72 hours" :
+                        order.liabilityType === "time_bound_1week" ? "1 week" :
+                        order.liabilityType === "time_bound_1month" ? "1 month" : "unknown"
+                      }`}
                     </p>
                   </div>
 
@@ -710,10 +716,30 @@ export default function LoaderOrderPage() {
               )}
 
               {isLoader && !order.liabilityType && (
-                <div className="p-3 bg-muted rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Waiting for receiver to select liability terms...
-                  </p>
+                <div className="space-y-4">
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Waiting for receiver to select liability terms...
+                    </p>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 bg-muted/30">
+                    <p className="font-medium mb-3 text-sm">Liability Options Reference:</p>
+                    <div className="space-y-3 text-sm">
+                      <div className="border-b pb-2">
+                        <p className="font-medium">Full Payment</p>
+                        <p className="text-muted-foreground">Receiver pays full amount even if assets are frozen or unusable.</p>
+                      </div>
+                      <div className="border-b pb-2">
+                        <p className="font-medium">Partial Payment (10%, 25%, or 50%)</p>
+                        <p className="text-muted-foreground">Receiver pays a percentage of the deal if assets are frozen or unusable.</p>
+                      </div>
+                      <div>
+                        <p className="font-medium">Time-Bound (24h, 48h, 72h, 1 week, 1 month)</p>
+                        <p className="text-muted-foreground">If assets are temporarily frozen, receiver waits until deadline. If usable before deadline, full payment applies. If still frozen at deadline, deal closes with no payment owed.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>

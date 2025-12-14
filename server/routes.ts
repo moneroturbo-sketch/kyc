@@ -3555,23 +3555,37 @@ export async function registerRoutes(
         loserId = order.receiverId;
 
         const receiverWallet = await storage.getWalletByUserId(order.receiverId);
+        const loaderWallet = await storage.getWalletByUserId(order.loaderId);
+        
+        // Get the ad to access upfront percentage
+        const ad = await storage.getLoaderAd(order.adId);
+        
+        // Calculate if loader had already sent upfront payment
+        const upfrontPercentage = ad?.upfrontPercentage || 0;
+        const upfrontAmountSent = order.loaderMarkedPaymentSent && upfrontPercentage > 0 
+          ? (dealAmount * upfrontPercentage / 100) 
+          : 0;
+        
         if (receiverWallet) {
           const receiverEscrowTotal = parseFloat(order.receiverFrozenAmount || "0") + parseFloat(order.receiverFeeReserve || "0");
           const currentReceiverEscrow = parseFloat(receiverWallet.escrowBalance);
           const currentReceiverAvailable = parseFloat(receiverWallet.availableBalance);
           
-          // Calculate how much penalty can come from escrow vs available balance
-          const penaltyFromEscrow = Math.min(penaltyAmount, receiverEscrowTotal);
-          const penaltyFromAvailable = penaltyAmount - penaltyFromEscrow;
+          // Total amount receiver owes: 5% penalty + any upfront amount loader already sent
+          const totalReceiverOwes = penaltyAmount + upfrontAmountSent;
           
-          // Release escrow minus penalty (loser's escrow is cleared, penalty goes to admin)
-          const receiverRefund = receiverEscrowTotal - penaltyFromEscrow;
+          // Calculate how much can come from escrow vs available balance
+          const amountFromEscrow = Math.min(totalReceiverOwes, receiverEscrowTotal);
+          const amountFromAvailable = totalReceiverOwes - amountFromEscrow;
+          
+          // Clear receiver's escrow, deduct what they owe
+          const receiverRefund = receiverEscrowTotal - amountFromEscrow;
           const newReceiverEscrow = (currentReceiverEscrow - receiverEscrowTotal).toFixed(8);
-          const newReceiverAvailable = (currentReceiverAvailable + receiverRefund - penaltyFromAvailable).toFixed(8);
+          const newReceiverAvailable = (currentReceiverAvailable + receiverRefund - amountFromAvailable).toFixed(8);
           
           await storage.updateWalletBalance(receiverWallet.id, newReceiverAvailable, newReceiverEscrow);
           
-          // Transfer penalty to admin wallet
+          // Transfer penalty (5%) to admin wallet
           if (adminWallet) {
             const newAdminBalance = (parseFloat(adminWallet.availableBalance) + penaltyAmount).toFixed(8);
             await storage.updateWalletBalance(adminWallet.id, newAdminBalance, adminWallet.escrowBalance);
@@ -3585,10 +3599,24 @@ export async function registerRoutes(
               description: `Dispute penalty from loser (receiver) - order ${order.id}`,
             });
           }
+          
+          // Credit loader the upfront amount they already sent (if any)
+          if (upfrontAmountSent > 0 && loaderWallet) {
+            const newLoaderAvailable = (parseFloat(loaderWallet.availableBalance) + upfrontAmountSent).toFixed(8);
+            await storage.updateWalletBalance(loaderWallet.id, newLoaderAvailable, loaderWallet.escrowBalance);
+            
+            await storage.createTransaction({
+              walletId: loaderWallet.id,
+              userId: order.loaderId,
+              type: "refund",
+              amount: upfrontAmountSent.toString(),
+              currency: "USDT",
+              description: `Refund of upfront payment (${upfrontPercentage}%) from dispute resolution - order ${order.id}`,
+            });
+          }
         }
 
-        // Full refund to loader (winner)
-        const loaderWallet = await storage.getWalletByUserId(order.loaderId);
+        // Full refund to loader of their escrow (winner)
         if (loaderWallet) {
           const loaderRefund = parseFloat(order.loaderFrozenAmount) + parseFloat(order.loaderFeeReserve || "0");
           await storage.releaseEscrow(loaderWallet.id, loaderRefund.toString());
