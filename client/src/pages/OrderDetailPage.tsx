@@ -36,6 +36,11 @@ import {
   Star,
   ThumbsUp,
   User,
+  Paperclip,
+  FileText,
+  Image,
+  Video,
+  File as FileIcon,
 } from "lucide-react";
 
 interface Order {
@@ -61,7 +66,9 @@ interface ChatMessage {
   id: string;
   orderId: string;
   senderId: string;
+  senderUsername?: string;
   message: string;
+  fileUrl?: string;
   isSystemMessage: boolean;
   createdAt: string;
 }
@@ -75,6 +82,7 @@ export default function OrderDetailPage() {
   const [, setLocation] = useLocation();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [accountDetailsConfirmed, setAccountDetailsConfirmed] = useState(false);
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -124,6 +132,51 @@ export default function OrderDetailPage() {
       setNewMessage("");
     },
   });
+
+  const uploadFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/orders/${orderId}/messages/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Failed to upload file");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages", orderId] });
+      toast({ title: "File uploaded", description: "File sent successfully" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Failed to upload file" });
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadFileMutation.mutate(file);
+      e.target.value = "";
+    }
+  };
+
+  const getFileIcon = (fileUrl: string) => {
+    const ext = fileUrl.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return Image;
+    if (['mp4', 'mov', 'avi', 'webm'].includes(ext || '')) return Video;
+    if (['pdf', 'doc', 'docx'].includes(ext || '')) return FileText;
+    return FileIcon;
+  };
+
+  const isImageFile = (fileUrl: string) => {
+    const ext = fileUrl.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif'].includes(ext || '');
+  };
 
   const markPaidMutation = useMutation({
     mutationFn: async () => {
@@ -586,11 +639,11 @@ export default function OrderDetailPage() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
-              Chat
+              Order Chat
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80 overflow-y-auto mb-4 space-y-3 p-4 bg-gray-800/50 rounded-lg">
+            <div className="h-96 overflow-y-auto mb-4 space-y-4 p-4 bg-gray-800/50 rounded-lg">
               {messagesLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
@@ -601,31 +654,100 @@ export default function OrderDetailPage() {
                 messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}
+                    className={`flex ${
+                      msg.isSystemMessage 
+                        ? "justify-center" 
+                        : msg.senderId === user?.id 
+                        ? "justify-end" 
+                        : "justify-start"
+                    }`}
+                    data-testid={`message-${msg.id}`}
                   >
-                    <div
-                      className={`max-w-[70%] p-3 rounded-lg ${
-                        msg.isSystemMessage
-                          ? "bg-gray-700 text-gray-300 text-center w-full"
-                          : msg.senderId === user?.id
-                          ? "bg-purple-600 text-white"
-                          : "bg-gray-700 text-white"
-                      }`}
-                    >
-                      <p>{msg.message}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {new Date(msg.createdAt).toLocaleTimeString()}
-                      </p>
-                    </div>
+                    {msg.isSystemMessage ? (
+                      <div className="px-4 py-2 bg-gray-700/50 rounded-full text-xs text-gray-400 italic">
+                        {msg.message}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col max-w-[75%]">
+                        {msg.senderId !== user?.id && (
+                          <span className="text-xs text-purple-400 mb-1 ml-1 font-medium">
+                            {isBuyer ? "Seller" : "Buyer"}
+                          </span>
+                        )}
+                        <div
+                          className={`p-3 rounded-xl ${
+                            msg.senderId === user?.id
+                              ? "bg-purple-600 text-white rounded-br-sm"
+                              : "bg-gray-700 text-white rounded-bl-sm"
+                          }`}
+                        >
+                          {msg.fileUrl && (
+                            <div className="mb-2">
+                              {isImageFile(msg.fileUrl) ? (
+                                <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
+                                  <img 
+                                    src={msg.fileUrl} 
+                                    alt="Attachment" 
+                                    className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                  />
+                                </a>
+                              ) : (
+                                <a 
+                                  href={msg.fileUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 p-2 bg-gray-600/50 rounded-lg hover:bg-gray-600/70 transition-colors"
+                                >
+                                  {(() => {
+                                    const FileIcon = getFileIcon(msg.fileUrl);
+                                    return <FileIcon className="h-5 w-5" />;
+                                  })()}
+                                  <span className="text-sm underline truncate max-w-[200px]">
+                                    {msg.message.replace('📎 Attached file: ', '')}
+                                  </span>
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {!msg.fileUrl && <p className="text-sm whitespace-pre-wrap">{msg.message}</p>}
+                          <p className={`text-xs mt-1 ${
+                            msg.senderId === user?.id ? "text-purple-200" : "text-gray-400"
+                          }`}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 text-center">No messages yet</p>
+                <div className="text-center py-8 text-gray-500">
+                  <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No messages yet. Start the conversation!</p>
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSendMessage} className="flex gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.mp4,.mov,.avi,.webm"
+            />
+            <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-gray-400 hover:text-white hover:bg-gray-700"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadFileMutation.isPending}
+                data-testid="button-attach-file"
+              >
+                <Paperclip className="h-5 w-5" />
+              </Button>
               <Input
                 placeholder="Type a message..."
                 className="flex-1 bg-gray-800 border-gray-700 text-white"

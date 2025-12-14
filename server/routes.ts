@@ -1189,6 +1189,41 @@ export async function registerRoutes(
     }
   });
 
+  // Send chat message with file attachment
+  app.post("/api/orders/:id/messages/upload", requireAuth, upload.single("file"), async (req: AuthRequest, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const vendorProfile = await storage.getVendorProfile(order.vendorId);
+      const isCreator = order.createdBy === req.user!.userId;
+      if (order.buyerId !== req.user!.userId && vendorProfile?.userId !== req.user!.userId && !isCreator) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+      const fileName = req.file.originalname;
+      const messageText = req.body.message || `📎 Attached file: ${fileName}`;
+
+      const message = await storage.createChatMessage({
+        orderId: req.params.id,
+        senderId: req.user!.userId,
+        message: messageText,
+        fileUrl: fileUrl,
+      });
+
+      res.json(message);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Cancel order (before account/payment exchange only)
   app.post("/api/orders/:id/cancel", requireAuth, async (req: AuthRequest, res) => {
     try {

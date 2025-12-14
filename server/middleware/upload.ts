@@ -13,21 +13,30 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = /jpeg|jpg|png|pdf/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const allowedExtensions = /jpeg|jpg|png|gif|pdf|doc|docx|xlsx|xls|csv|mp4|mov|avi|webm/;
+  const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+  
+  const allowedMimeTypes = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+    'application/pdf',
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv',
+    'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'
+  ];
+  const mimetypeAllowed = allowedMimeTypes.includes(file.mimetype);
 
-  if (mimetype && extname) {
+  if (mimetypeAllowed && extname) {
     cb(null, true);
   } else {
-    cb(new Error("Only images (JPEG, PNG) and PDF files are allowed"));
+    cb(new Error("File type not allowed. Supported: images, PDF, Word, Excel, CSV, and video files"));
   }
 };
 
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 50 * 1024 * 1024,
   },
   fileFilter,
 });
