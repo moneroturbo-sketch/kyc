@@ -654,13 +654,15 @@ export default function LoaderOrderPage() {
                     <p className="text-sm text-muted-foreground">
                       {order.liabilityType === "full_payment" && "Full Payment - Pay full amount even if assets are frozen"}
                       {order.liabilityType?.startsWith("partial_") && `Partial Payment - ${order.liabilityType.split("_")[1]}% if assets are frozen`}
-                      {order.liabilityType?.startsWith("time_bound_") && `Time-Bound - Wait ${
-                        order.liabilityType === "time_bound_24h" ? "24 hours" :
-                        order.liabilityType === "time_bound_48h" ? "48 hours" :
-                        order.liabilityType === "time_bound_72h" ? "72 hours" :
-                        order.liabilityType === "time_bound_1week" ? "1 week" :
-                        order.liabilityType === "time_bound_1month" ? "1 month" : "unknown"
-                      }`}
+                      {order.liabilityType?.startsWith("time_bound_") && (() => {
+                        const timeLabel = 
+                          order.liabilityType === "time_bound_24h" ? "24 hours" :
+                          order.liabilityType === "time_bound_48h" ? "48 hours" :
+                          order.liabilityType === "time_bound_72h" ? "72 hours" :
+                          order.liabilityType === "time_bound_1week" ? "1 week" :
+                          order.liabilityType === "time_bound_1month" ? "1 month" : "unknown";
+                        return `Time-Bound (${timeLabel}) - If assets are temporarily frozen, receiver agrees to wait ${timeLabel}. If assets are usable before the deadline, full payment applies. If still frozen at deadline, the deal closes with no payment.`;
+                      })()}
                     </p>
                   </div>
 
@@ -890,7 +892,12 @@ export default function LoaderOrderPage() {
           </Card>
         )}
 
-        {order.status === "completed" && !feedbackData?.hasLeftFeedback && !showFeedbackForm && (
+        {/* Feedback - only winner can leave feedback for disputed orders, or either party for normal completion */}
+        {((order.status === "completed") || 
+          (order.status === "resolved_loader_wins" && isLoader) || 
+          (order.status === "resolved_receiver_wins" && isReceiver) ||
+          (order.status === "resolved_mutual")
+        ) && !feedbackData?.hasLeftFeedback && !showFeedbackForm && (
           <Card className="mb-4 border-primary/50">
             <CardContent className="py-4">
               <p className="text-sm text-muted-foreground mb-3">
