@@ -624,6 +624,12 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Offer not found or inactive" });
       }
 
+      // Prevent users from trading on their own ad
+      const vendorProfile = await storage.getVendorProfile(offer.vendorId);
+      if (vendorProfile && vendorProfile.userId === req.user!.userId) {
+        return res.status(400).json({ message: "You cannot trade on your own ad" });
+      }
+
       const tradeIntent = offer.tradeIntent || "sell_ad";
       const platformFeeRate = 0.20;
       const escrowAmount = parseFloat(fiatAmount);

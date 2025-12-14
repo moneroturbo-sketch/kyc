@@ -14,14 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ChevronDown,
   Home,
   ShoppingCart,
   Megaphone,
@@ -29,7 +21,6 @@ import {
   User,
   ThumbsUp,
   Clock,
-  Filter,
   ChevronLeft,
   Bell,
   Search,
@@ -37,6 +28,7 @@ import {
   Store,
   Loader2,
   Shield,
+  Filter,
 } from "lucide-react";
 
 interface Offer {
@@ -76,7 +68,7 @@ export default function HomePage() {
   const [location, setLocation] = useLocation();
   const [mainSection, setMainSection] = useState<MainSection>("feed");
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const [selectedAccount, setSelectedAccount] = useState("all");
+  const [selectedAccount] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAdsModal, setShowAdsModal] = useState(false);
 
@@ -262,30 +254,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-4 pb-3">
-              <div className="flex items-center gap-4">
-                <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                  <SelectTrigger className="w-auto border-0 shadow-none p-0 h-auto bg-transparent" data-testid="filter-account">
-                    <div className="flex items-center gap-1 text-foreground font-medium text-sm">
-                      <SelectValue placeholder="All Accounts" />
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Accounts</SelectItem>
-                    <SelectItem value="Binance UID">Binance</SelectItem>
-                    <SelectItem value="OKX UID">OKX</SelectItem>
-                    <SelectItem value="MEXC UID">MEXC</SelectItem>
-                    <SelectItem value="Bybit UID">Bybit</SelectItem>
-                    <SelectItem value="Bitget UID">Bitget</SelectItem>
-                    <SelectItem value="Wallet Address">Wallet</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <button className="p-2" data-testid="button-filter">
-                <Filter className="h-5 w-5 text-muted-foreground" />
-              </button>
-            </div>
           </>
         )}
       </header>

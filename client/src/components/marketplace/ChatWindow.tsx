@@ -144,7 +144,7 @@ export function ChatWindow({
             ref={fileInputRef}
             onChange={handleFileSelect}
             className="hidden"
-            accept="image/*,.pdf,.doc,.docx"
+            accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.mp4,.mov,.avi,.webm"
           />
           {onSendFile && (
             <Button
