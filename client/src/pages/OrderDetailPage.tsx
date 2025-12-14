@@ -535,6 +535,30 @@ export default function OrderDetailPage() {
                   Open Dispute
                 </Button>
               )}
+
+              {(order.status === "created" || order.status === "escrowed") && (
+                <Button
+                  variant="outline"
+                  className="border-red-600 text-red-400 hover:bg-red-600/20"
+                  onClick={() => setShowCancelDialog(true)}
+                  disabled={cancelOrderMutation.isPending}
+                  data-testid="button-cancel-order"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel Order
+                </Button>
+              )}
+
+              {order.status === "completed" && !feedbackStatus?.hasSubmitted && (
+                <Button
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                  onClick={() => setShowFeedbackDialog(true)}
+                  data-testid="button-leave-feedback"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Leave Feedback
+                </Button>
+              )}
             </div>
 
             {order.status === "awaiting_deposit" && isBuyer && (
