@@ -20,6 +20,8 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const VendorPage = lazy(() => import("@/pages/VendorPage"));
 const DisputeAdminPage = lazy(() => import("@/pages/DisputeAdminPage"));
 const LoaderOrderPage = lazy(() => import("@/pages/LoaderOrderPage"));
+const SupportPage = lazy(() => import("@/pages/SupportPage"));
+const FinancePage = lazy(() => import("@/pages/FinancePage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageLoader() {
@@ -56,6 +58,16 @@ const ProtectedRoute = memo(function ProtectedRoute({
     return <Redirect to="/wallet" />;
   }
   
+  // Support redirects to support dashboard
+  if (user?.role === "support" && allowedRoles && !allowedRoles.includes("support")) {
+    return <Redirect to="/support" />;
+  }
+  
+  // Finance manager redirects to finance dashboard
+  if (user?.role === "finance_manager" && allowedRoles && !allowedRoles.includes("finance_manager")) {
+    return <Redirect to="/finance" />;
+  }
+  
   if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
     return <Redirect to="/" />;
   }
@@ -78,6 +90,8 @@ function Router() {
         <Route path="/vendor" component={() => <ProtectedRoute component={VendorPage} allowedRoles={["customer", "vendor"]} />} />
         <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} allowedRoles={["admin"]} />} />
         <Route path="/disputes" component={() => <ProtectedRoute component={DisputeAdminPage} allowedRoles={["admin", "dispute_admin"]} />} />
+        <Route path="/support" component={() => <ProtectedRoute component={SupportPage} allowedRoles={["admin", "support"]} />} />
+        <Route path="/finance" component={() => <ProtectedRoute component={FinancePage} allowedRoles={["admin", "finance_manager"]} />} />
         <Route path="/loader-order/:id" component={() => <ProtectedRoute component={LoaderOrderPage} allowedRoles={["customer", "vendor"]} />} />
         <Route component={NotFound} />
       </Switch>
