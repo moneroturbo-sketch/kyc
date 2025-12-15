@@ -28,11 +28,11 @@ export default function MaintenancePage() {
   const getModeTitle = () => {
     switch (settings?.mode) {
       case "full":
-        return "Platform Under Maintenance";
+        return "Platform Under Full Maintenance";
       case "financial":
         return "Financial Services Temporarily Unavailable";
       case "trading":
-        return "Trading Services Temporarily Unavailable";
+        return "Trading/Order Services Temporarily Unavailable";
       case "readonly":
         return "Platform in Read-Only Mode";
       default:
@@ -46,15 +46,45 @@ export default function MaintenancePage() {
     }
     switch (settings?.mode) {
       case "full":
-        return "We are performing scheduled maintenance to improve our platform. All services are temporarily unavailable.";
+        return "We are performing scheduled maintenance. Login and sign up are temporarily disabled. Only administrators have access.";
       case "financial":
-        return "Deposit and withdrawal services are temporarily unavailable while we perform maintenance.";
+        return "Deposit and withdrawal services are temporarily unavailable. You can still login, view orders, access KYC, and use support.";
       case "trading":
-        return "Trading services are temporarily unavailable while we perform system upgrades.";
+        return "Order creation and matching are temporarily unavailable. You can still login, view balances, deposit, withdraw, and access support.";
       case "readonly":
-        return "The platform is currently in read-only mode. You can view your data but cannot make any changes.";
+        return "Emergency maintenance mode. You can login and view your balances, orders, and history, but all actions are disabled.";
       default:
         return "We are upgrading our systems to improve security and performance.";
+    }
+  };
+
+  const getEnabledFeatures = () => {
+    switch (settings?.mode) {
+      case "trading":
+        return ["Login", "View Balances", "Deposits", "Withdrawals", "KYC", "Disputes", "Chat/Support"];
+      case "financial":
+        return ["Login", "View Orders", "KYC", "Disputes", "Admin Panel"];
+      case "readonly":
+        return ["Login", "View Balances", "View Orders", "View History"];
+      case "full":
+        return ["Super-admin access only"];
+      default:
+        return [];
+    }
+  };
+
+  const getDisabledFeatures = () => {
+    switch (settings?.mode) {
+      case "trading":
+        return ["Create Orders", "Accept/Match Orders", "Order Status Changes"];
+      case "financial":
+        return ["Deposits", "Withdrawals"];
+      case "readonly":
+        return ["All User Actions"];
+      case "full":
+        return ["Login", "Sign Up", "All User Actions"];
+      default:
+        return [];
     }
   };
 
@@ -86,28 +116,33 @@ export default function MaintenancePage() {
             </div>
           )}
 
-          <div className="flex flex-wrap justify-center gap-2 pt-4" data-testid="maintenance-disabled-features">
-            {!settings?.loginEnabled && (
-              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/50">
-                Login Disabled
-              </Badge>
-            )}
-            {!settings?.depositsEnabled && (
-              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/50">
-                Deposits Disabled
-              </Badge>
-            )}
-            {!settings?.withdrawalsEnabled && (
-              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/50">
-                Withdrawals Disabled
-              </Badge>
-            )}
-            {!settings?.tradingEnabled && (
-              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/50">
-                Trading Disabled
-              </Badge>
-            )}
-          </div>
+          {/* Disabled Features */}
+          {getDisabledFeatures().length > 0 && (
+            <div className="space-y-2" data-testid="maintenance-disabled-features">
+              <p className="text-red-400 text-sm font-medium">Disabled:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {getDisabledFeatures().map((feature) => (
+                  <Badge key={feature} variant="outline" className="bg-red-500/10 text-red-400 border-red-500/50">
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Enabled Features */}
+          {getEnabledFeatures().length > 0 && settings?.mode !== "full" && (
+            <div className="space-y-2" data-testid="maintenance-enabled-features">
+              <p className="text-green-400 text-sm font-medium">Still Available:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {getEnabledFeatures().map((feature) => (
+                  <Badge key={feature} variant="outline" className="bg-green-500/10 text-green-400 border-green-500/50">
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="pt-6 space-y-4">
             <Button

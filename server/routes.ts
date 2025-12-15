@@ -5,6 +5,7 @@ import { hashPassword, comparePassword } from "./utils/bcrypt";
 import { generateToken } from "./utils/jwt";
 import { requireAuth, requireAdmin, requireRole, requireDisputeAdmin, requireSupport, requireFinanceManager, type AuthRequest } from "./middleware/auth";
 import { loginLimiter, registerLimiter, apiLimiter } from "./middleware/rateLimiter";
+import { requireLoginEnabled, requireTradingEnabled, requireDepositsEnabled, requireWithdrawalsEnabled } from "./middleware/maintenance";
 import { upload } from "./middleware/upload";
 import { generateTotpSecret, verifyTotp, generateRecoveryCodes } from "./utils/totp";
 import { holdEscrow, releaseEscrow, refundEscrow, holdBuyerEscrow, releaseEscrowWithFee, refundBuyerEscrow, holdOfferEscrow, releaseOfferEscrow } from "./services/escrow";
@@ -31,7 +32,7 @@ export async function registerRoutes(
   // ==================== AUTH ROUTES ====================
   
   // Register
-  app.post("/api/auth/register", registerLimiter, async (req, res) => {
+  app.post("/api/auth/register", registerLimiter, requireLoginEnabled, async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
       
@@ -87,7 +88,7 @@ export async function registerRoutes(
   });
 
   // Login
-  app.post("/api/auth/login", loginLimiter, async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, requireLoginEnabled, async (req, res) => {
     try {
       const { username, password, twoFactorToken } = req.body;
 
@@ -609,7 +610,7 @@ export async function registerRoutes(
   });
 
   // Create order
-  app.post("/api/orders", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/orders", requireAuth, requireTradingEnabled, async (req: AuthRequest, res) => {
     try {
       // Check if user is frozen
       const user = await storage.getUser(req.user!.userId);
@@ -1417,7 +1418,7 @@ export async function registerRoutes(
   });
 
   // Mock deposit
-  app.post("/api/wallet/deposit", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/wallet/deposit", requireAuth, requireDepositsEnabled, async (req: AuthRequest, res) => {
     try {
       const { amount } = req.body;
       const wallet = await storage.getWalletByUserId(req.user!.userId);

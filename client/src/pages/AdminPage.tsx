@@ -1227,11 +1227,11 @@ export default function AdminPage() {
                       <Label className="text-white text-lg font-semibold">Maintenance Mode</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                         {[
-                          { value: "none", label: "None (Online)", desc: "All features enabled", color: "green" },
-                          { value: "full", label: "Full Maintenance", desc: "Login disabled, all actions blocked", color: "red" },
-                          { value: "financial", label: "Financial Maintenance", desc: "Deposits & withdrawals disabled", color: "orange" },
-                          { value: "trading", label: "Trading Maintenance", desc: "New orders disabled", color: "yellow" },
-                          { value: "readonly", label: "Read-Only Mode", desc: "Users can view, no actions allowed", color: "blue" },
+                          { value: "none", label: "None (Online)", desc: "Everything works normally", color: "green" },
+                          { value: "trading", label: "Trading/Order Maintenance", desc: "Orders disabled, wallet & login work", color: "yellow" },
+                          { value: "financial", label: "Financial Maintenance", desc: "Deposits & withdrawals disabled only", color: "orange" },
+                          { value: "readonly", label: "Read-Only Mode", desc: "Emergency: view only, no actions", color: "blue" },
+                          { value: "full", label: "Full Maintenance", desc: "Login disabled, super-admin only", color: "red" },
                         ].map((mode) => (
                           <button
                             key={mode.value}
