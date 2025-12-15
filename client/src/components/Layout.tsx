@@ -70,6 +70,17 @@ export default function Layout({ children }: LayoutProps) {
     refetchInterval: 30000,
   });
 
+  const { data: pendingOrdersCount } = useQuery({
+    queryKey: ["orders", "pending", "count"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/orders/pending/count");
+      const data = await res.json();
+      return data.count || 0;
+    },
+    enabled: authenticated,
+    refetchInterval: 30000,
+  });
+
   const handleLogout = () => {
     logout();
     setLocation("/auth");
@@ -117,11 +128,16 @@ export default function Layout({ children }: LayoutProps) {
                       <Button
                         variant={location === item.href ? "secondary" : "ghost"}
                         size="sm"
-                        className="gap-2 text-gray-300 hover:text-white"
+                        className="gap-2 text-gray-300 hover:text-white relative"
                         data-testid={`nav-${item.label.toLowerCase()}`}
                       >
                         <item.icon className="h-4 w-4" />
                         {item.label}
+                        {item.label === "Orders" && pendingOrdersCount > 0 && (
+                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-[10px]">
+                            {pendingOrdersCount > 9 ? "9+" : pendingOrdersCount}
+                          </Badge>
+                        )}
                       </Button>
                     </Link>
                   ))}
@@ -201,11 +217,16 @@ export default function Layout({ children }: LayoutProps) {
                   <Link key={item.href} href={item.href}>
                     <Button
                       variant={location === item.href ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2"
+                      className="w-full justify-start gap-2 relative"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="h-4 w-4" />
                       {item.label}
+                      {item.label === "Orders" && pendingOrdersCount > 0 && (
+                        <Badge className="ml-auto h-5 min-w-5 px-1.5 flex items-center justify-center bg-red-500 text-[10px]">
+                          {pendingOrdersCount > 9 ? "9+" : pendingOrdersCount}
+                        </Badge>
+                      )}
                     </Button>
                   </Link>
                 ))}

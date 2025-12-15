@@ -1087,6 +1087,41 @@ export async function registerRoutes(
   });
 
   // Get user's orders
+  // Get pending orders count for navigation badge
+  app.get("/api/orders/pending/count", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const buyerOrders = await storage.getOrdersByBuyer(req.user!.userId);
+      const vendorProfile = await storage.getVendorProfileByUserId(req.user!.userId);
+      let vendorOrders: any[] = [];
+      if (vendorProfile) {
+        vendorOrders = await storage.getOrdersByVendor(vendorProfile.id);
+      }
+
+      const allOrders = [...buyerOrders, ...vendorOrders];
+      const uniqueOrders = allOrders.filter((order, index, self) => 
+        index === self.findIndex(o => o.id === order.id)
+      );
+      const pendingCount = uniqueOrders.filter(o => 
+        o.status === "created" || o.status === "awaiting_deposit" || o.status === "escrowed" || o.status === "paid" || o.status === "confirmed"
+      ).length;
+
+      // Also count pending loader orders
+      const loaderOrders = await storage.getLoaderOrdersByLoader(req.user!.userId);
+      const receiverOrders = await storage.getLoaderOrdersByReceiver(req.user!.userId);
+      const allLoaderOrders = [...loaderOrders, ...receiverOrders];
+      const uniqueLoaderOrders = allLoaderOrders.filter((order, index, self) => 
+        index === self.findIndex(o => o.id === order.id)
+      );
+      const pendingLoaderCount = uniqueLoaderOrders.filter(o => 
+        ["created", "awaiting_liability_confirmation", "awaiting_payment_details", "payment_details_sent", "payment_sent"].includes(o.status)
+      ).length;
+
+      res.json({ count: pendingCount + pendingLoaderCount });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/orders", requireAuth, async (req: AuthRequest, res) => {
     try {
       const buyerOrders = await storage.getOrdersByBuyer(req.user!.userId);

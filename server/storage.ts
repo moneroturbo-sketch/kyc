@@ -436,10 +436,12 @@ export class DatabaseStorage implements IStorage {
         offer: offers,
         vendor: vendorProfiles,
         user: users,
+        kycRecord: kyc,
       })
       .from(offers)
       .innerJoin(vendorProfiles, eq(offers.vendorId, vendorProfiles.id))
       .innerJoin(users, eq(vendorProfiles.userId, users.id))
+      .leftJoin(kyc, eq(kyc.userId, users.id))
       .where(and(
         eq(offers.isActive, true), 
         eq(vendorProfiles.isApproved, true),
@@ -472,20 +474,27 @@ export class DatabaseStorage implements IStorage {
     }
 
     const results = await query.orderBy(desc(offers.isPriority), desc(offers.createdAt));
-    return results.map((r) => ({
-      ...r.offer,
-      vendorUserId: r.vendor.userId,
-      vendorName: r.vendor.businessName || r.user.username,
-      vendorTrades: r.vendor.totalTrades,
-      vendorCompletionRate: r.vendor.totalTrades > 0 
-        ? ((r.vendor.completedTrades / r.vendor.totalTrades) * 100).toFixed(2)
-        : "100.00",
-      vendorRating: parseFloat(r.vendor.averageRating || "0") > 0 
-        ? (parseFloat(r.vendor.averageRating || "0") * 20).toFixed(2)
-        : "99.00",
-      vendorVerified: r.user.emailVerified,
-      responseTime: 15,
-    }));
+    
+    return results.map((r) => {
+      const isKycVerified = r.kycRecord?.status === "approved";
+      const isStarVerified = r.kycRecord?.isStarVerified || false;
+      
+      return {
+        ...r.offer,
+        vendorUserId: r.vendor.userId,
+        vendorName: r.vendor.businessName || r.user.username,
+        vendorTrades: r.vendor.totalTrades,
+        vendorCompletionRate: r.vendor.totalTrades > 0 
+          ? ((r.vendor.completedTrades / r.vendor.totalTrades) * 100).toFixed(2)
+          : "100.00",
+        vendorRating: parseFloat(r.vendor.averageRating || "0") > 0 
+          ? (parseFloat(r.vendor.averageRating || "0") * 20).toFixed(2)
+          : "99.00",
+        vendorVerified: isKycVerified,
+        vendorStarVerified: isStarVerified,
+        responseTime: 15,
+      };
+    });
   }
 
   async deactivateOffer(id: string): Promise<void> {

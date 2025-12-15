@@ -859,6 +859,72 @@ export default function OrderDetailPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-400" />
+                Leave Feedback
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Rate your experience with this trade. Your feedback helps build trust in the marketplace.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label className="text-gray-300">Rating</Label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Button
+                      key={star}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={`${feedbackStars >= star ? 'text-yellow-400' : 'text-gray-600'} hover:text-yellow-400`}
+                      onClick={() => setFeedbackStars(star)}
+                      data-testid={`button-star-${star}`}
+                    >
+                      <Star className={`h-6 w-6 ${feedbackStars >= star ? 'fill-yellow-400' : ''}`} />
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-gray-300">Comment (optional)</Label>
+                <Textarea
+                  placeholder="Share your experience..."
+                  className="bg-gray-800 border-gray-700 text-white min-h-[100px]"
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  data-testid="input-feedback-comment"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShowFeedbackDialog(false);
+                    setFeedbackStars(5);
+                    setFeedbackComment("");
+                  }}
+                  data-testid="button-cancel-feedback"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-yellow-600 hover:bg-yellow-700"
+                  onClick={() => submitFeedbackMutation.mutate({ stars: feedbackStars, comment: feedbackComment })}
+                  disabled={submitFeedbackMutation.isPending}
+                  data-testid="button-submit-feedback"
+                >
+                  {submitFeedbackMutation.isPending ? "Submitting..." : "Submit Feedback"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

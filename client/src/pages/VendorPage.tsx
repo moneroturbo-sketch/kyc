@@ -56,6 +56,8 @@ export default function VendorPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
   const [newOffer, setNewOffer] = useState({
     type: "sell",
     currency: "USD",
@@ -65,6 +67,14 @@ export default function VendorPage() {
     availableAmount: "",
     accountType: "",
     terms: "",
+  });
+  const [editOffer, setEditOffer] = useState({
+    pricePerUnit: "",
+    minLimit: "",
+    maxLimit: "",
+    availableAmount: "",
+    terms: "",
+    isActive: true,
   });
 
   const calculateMaxAmount = (price: string, available: string) => {
@@ -177,8 +187,60 @@ export default function VendorPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorOffers"] });
+      toast({ title: "Offer Deleted", description: "Your ad has been removed" });
     },
   });
+
+  const updateOfferMutation = useMutation({
+    mutationFn: async ({ offerId, updates }: { offerId: string; updates: typeof editOffer }) => {
+      const res = await fetchWithAuth(`/api/vendor/offers/${offerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to update offer");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorOffers"] });
+      setEditDialogOpen(false);
+      setEditingOffer(null);
+      toast({ title: "Offer Updated", description: "Your ad has been updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Failed to Update", description: error.message });
+    },
+  });
+
+  const handleEditClick = (offer: Offer) => {
+    setEditingOffer(offer);
+    setEditOffer({
+      pricePerUnit: offer.pricePerUnit,
+      minLimit: offer.minLimit,
+      maxLimit: offer.maxLimit,
+      availableAmount: offer.availableAmount,
+      terms: offer.terms || "",
+      isActive: offer.isActive,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditPriceChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (numValue < 0) return;
+    const maxLimit = calculateMaxAmount(value, editOffer.availableAmount);
+    setEditOffer({ ...editOffer, pricePerUnit: value, maxLimit });
+  };
+
+  const handleEditAvailableChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (numValue < 0) return;
+    const maxLimit = calculateMaxAmount(editOffer.pricePerUnit, value);
+    setEditOffer({ ...editOffer, availableAmount: value, maxLimit });
+  };
 
   return (
     <Layout>
@@ -400,6 +462,7 @@ export default function VendorPage() {
                               variant="ghost"
                               size="icon"
                               className="text-muted-foreground hover:text-foreground"
+                              onClick={() => handleEditClick(offer)}
                               data-testid={`button-edit-${offer.id}`}
                             >
                               <Edit className="h-4 w-4" />
@@ -442,6 +505,92 @@ export default function VendorPage() {
             </CardContent>
           </Card>
         )}
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="bg-gray-900 border-gray-800 max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-white">Edit Offer</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Price per Account (USD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editOffer.pricePerUnit}
+                  onChange={(e) => handleEditPriceChange(e.target.value)}
+                  className="bg-gray-800 border-gray-700"
+                  data-testid="edit-input-price"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Available Accounts</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={editOffer.availableAmount}
+                  onChange={(e) => handleEditAvailableChange(e.target.value)}
+                  className="bg-gray-800 border-gray-700"
+                  data-testid="edit-input-available"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Min Limit (USD)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={editOffer.minLimit}
+                    onChange={(e) => setEditOffer({ ...editOffer, minLimit: e.target.value })}
+                    className="bg-gray-800 border-gray-700"
+                    data-testid="edit-input-min-limit"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Limit (USD)</Label>
+                  <Input
+                    type="number"
+                    value={editOffer.maxLimit}
+                    className="bg-gray-800 border-gray-700 opacity-60"
+                    data-testid="edit-input-max-limit"
+                    readOnly
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Terms (Optional)</Label>
+                <Textarea
+                  value={editOffer.terms}
+                  onChange={(e) => setEditOffer({ ...editOffer, terms: e.target.value })}
+                  className="bg-gray-800 border-gray-700"
+                  placeholder="Trade terms and conditions..."
+                  data-testid="edit-input-terms"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={editOffer.isActive}
+                  onChange={(e) => setEditOffer({ ...editOffer, isActive: e.target.checked })}
+                  className="rounded"
+                  data-testid="edit-checkbox-active"
+                />
+                <Label>Active (visible in marketplace)</Label>
+              </div>
+              <Button
+                className="w-full bg-purple-600 hover:bg-purple-700"
+                onClick={() => editingOffer && updateOfferMutation.mutate({ offerId: editingOffer.id, updates: editOffer })}
+                disabled={updateOfferMutation.isPending}
+                data-testid="button-update-offer"
+              >
+                {updateOfferMutation.isPending ? "Updating..." : "Update Offer"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
