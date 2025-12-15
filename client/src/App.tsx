@@ -93,9 +93,9 @@ function Router() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isStaff = ["admin", "support", "finance_manager", "dispute_admin"].includes(user?.role);
 
-  const isMaintenanceActive = maintenanceStatus?.mode && maintenanceStatus.mode !== "none";
+  const isFullMaintenance = maintenanceStatus?.mode === "full";
 
-  if (!isLoading && isMaintenanceActive && !isStaff) {
+  if (!isLoading && isFullMaintenance && !isStaff) {
     return (
       <Suspense fallback={<PageLoader />}>
         <MaintenancePage />
