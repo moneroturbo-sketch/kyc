@@ -4792,6 +4792,47 @@ export async function registerRoutes(
     }
   });
 
+  // Get all transactions for finance managers
+  app.get("/api/finance/transactions", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const allTransactions = await storage.getAllTransactions();
+      res.json(allTransactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Flag user as suspicious (adds note and freezes if needed)
+  app.post("/api/finance/users/:id/flag", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { reason, shouldFreeze } = req.body;
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (shouldFreeze) {
+        await storage.freezeUser(id, `FLAGGED: ${reason}`);
+      }
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "finance_user_flagged",
+        resource: "users",
+        resourceId: id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        changes: { reason, targetUser: user.username, frozen: shouldFreeze },
+      });
+
+      res.json({ message: "User flagged successfully", frozen: shouldFreeze });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== ADMIN PLATFORM STATS ====================
   
   // Get admin platform stats (users by category, balances, etc.)

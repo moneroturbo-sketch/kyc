@@ -30,7 +30,18 @@ import {
   Eye,
   History,
   Banknote,
+  Flag,
+  CreditCard,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface WithdrawalRequest {
   id: string;
@@ -67,6 +78,9 @@ interface Transaction {
   currency: string;
   description: string | null;
   createdAt: string;
+  walletId?: string;
+  userId?: string;
+  status?: string;
 }
 
 interface PlatformStats {
@@ -85,6 +99,8 @@ export default function FinancePage() {
   const [selectedUser, setSelectedUser] = useState<UserWithWallet | null>(null);
   const [freezeReason, setFreezeReason] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [flagReason, setFlagReason] = useState("");
+  const [shouldFreezeOnFlag, setShouldFreezeOnFlag] = useState(false);
 
   if (user?.role !== "finance_manager" && user?.role !== "admin") {
     setLocation("/");
@@ -118,6 +134,39 @@ export default function FinancePage() {
       return res.json();
     },
     enabled: false,
+  });
+
+  const { data: allTransactions, isLoading: loadingTransactions } = useQuery<Transaction[]>({
+    queryKey: ["finance-all-transactions"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/finance/transactions");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const flagUserMutation = useMutation({
+    mutationFn: async ({ userId, reason, shouldFreeze }: { userId: string; reason: string; shouldFreeze: boolean }) => {
+      const res = await fetchWithAuth(`/api/finance/users/${userId}/flag`, {
+        method: "POST",
+        body: JSON.stringify({ reason, shouldFreeze }),
+      });
+      if (!res.ok) throw new Error("Failed to flag user");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["finance-search-user", searchUsername] });
+      queryClient.invalidateQueries({ queryKey: ["finance-pending-withdrawals"] });
+      toast({ 
+        title: "User Flagged", 
+        description: data.frozen ? "User has been flagged and account frozen" : "User has been flagged for review" 
+      });
+      setFlagReason("");
+      setShouldFreezeOnFlag(false);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to flag user" });
+    },
   });
 
   const approveWithdrawalMutation = useMutation({
@@ -259,10 +308,14 @@ export default function FinancePage() {
         </div>
 
         <Tabs defaultValue="withdrawals" className="space-y-4">
-          <TabsList className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+          <TabsList className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">
               <ArrowUpCircle className="h-4 w-4 mr-2" />
               Pending Withdrawals ({pendingWithdrawals?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="transactions" data-testid="tab-transactions">
+              <CreditCard className="h-4 w-4 mr-2" />
+              All Transactions
             </TabsTrigger>
             <TabsTrigger value="accounts" data-testid="tab-accounts">
               <Wallet className="h-4 w-4 mr-2" />
@@ -379,6 +432,74 @@ export default function FinancePage() {
             )}
           </TabsContent>
 
+          <TabsContent value="transactions" className="space-y-4">
+            <Card className="bg-gray-100 dark:bg-gray-900/50 border-gray-300 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  All Platform Transactions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingTransactions ? (
+                  <Skeleton className="h-64 bg-gray-200 dark:bg-gray-800" />
+                ) : allTransactions && allTransactions.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-300 dark:border-gray-700">
+                          <TableHead className="text-gray-600 dark:text-gray-400">Type</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Amount</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Status</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Description</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allTransactions.slice(0, 100).map((tx: Transaction) => (
+                          <TableRow key={tx.id} className="border-gray-200 dark:border-gray-700" data-testid={`transaction-row-${tx.id}`}>
+                            <TableCell className="text-gray-900 dark:text-white">
+                              <div className="flex items-center gap-2">
+                                {tx.type === "deposit" ? (
+                                  <ArrowDownCircle className="h-4 w-4 text-green-500" />
+                                ) : tx.type === "withdraw" || tx.type === "withdrawal" ? (
+                                  <ArrowUpCircle className="h-4 w-4 text-red-500" />
+                                ) : (
+                                  <DollarSign className="h-4 w-4 text-blue-500" />
+                                )}
+                                <span className="capitalize">{tx.type.replace("_", " ")}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className={`font-bold ${tx.type === "deposit" || tx.type === "escrow_release" || tx.type === "refund" ? "text-green-500" : "text-red-500"}`}>
+                              {tx.type === "deposit" || tx.type === "escrow_release" || tx.type === "refund" ? "+" : "-"}${parseFloat(tx.amount).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={tx.status === "completed" ? "default" : tx.status === "pending" ? "secondary" : "outline"}>
+                                {tx.status || "completed"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-gray-600 dark:text-gray-400 max-w-xs truncate">{tx.description || "-"}</TableCell>
+                            <TableCell className="text-gray-600 dark:text-gray-400">{new Date(tx.createdAt).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {allTransactions.length > 100 && (
+                      <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-sm">
+                        Showing 100 of {allTransactions.length} transactions
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No transactions found</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="accounts" className="space-y-4">
             <Card className="bg-gray-100 dark:bg-gray-900/50 border-gray-300 dark:border-gray-800">
               <CardHeader>
@@ -441,32 +562,69 @@ export default function FinancePage() {
                             <Unlock className="h-4 w-4 mr-2" />Unfreeze Account
                           </Button>
                         ) : (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="destructive" data-testid="button-freeze-user">
-                                <Ban className="h-4 w-4 mr-2" />Freeze Account
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
-                              <DialogHeader>
-                                <DialogTitle className="text-gray-900 dark:text-white">Freeze Account</DialogTitle>
-                                <DialogDescription className="text-gray-600 dark:text-gray-400">
-                                  This will prevent the user from making any transactions.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <Textarea value={freezeReason} onChange={(e) => setFreezeReason(e.target.value)} placeholder="Reason for freezing..." className="bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700" />
-                              </div>
-                              <DialogFooter>
-                                <DialogClose asChild>
-                                  <Button variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button variant="destructive" onClick={() => freezeUserMutation.mutate({ userId: searchedUser.id, reason: freezeReason })} disabled={freezeUserMutation.isPending || !freezeReason.trim()}>
-                                  Confirm Freeze
+                          <>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="destructive" data-testid="button-freeze-user">
+                                  <Ban className="h-4 w-4 mr-2" />Freeze Account
                                 </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                              </DialogTrigger>
+                              <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                                <DialogHeader>
+                                  <DialogTitle className="text-gray-900 dark:text-white">Freeze Account</DialogTitle>
+                                  <DialogDescription className="text-gray-600 dark:text-gray-400">
+                                    This will prevent the user from making any transactions.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <Textarea value={freezeReason} onChange={(e) => setFreezeReason(e.target.value)} placeholder="Reason for freezing..." className="bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700" />
+                                </div>
+                                <DialogFooter>
+                                  <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                  </DialogClose>
+                                  <Button variant="destructive" onClick={() => freezeUserMutation.mutate({ userId: searchedUser.id, reason: freezeReason })} disabled={freezeUserMutation.isPending || !freezeReason.trim()}>
+                                    Confirm Freeze
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20" data-testid="button-flag-user">
+                                  <Flag className="h-4 w-4 mr-2" />Flag Suspicious
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                                <DialogHeader>
+                                  <DialogTitle className="text-gray-900 dark:text-white">Flag Suspicious Account</DialogTitle>
+                                  <DialogDescription className="text-gray-600 dark:text-gray-400">
+                                    Report this account for suspicious activity. Optionally freeze the account.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-gray-700 dark:text-gray-300">Reason for flagging</Label>
+                                    <Textarea value={flagReason} onChange={(e) => setFlagReason(e.target.value)} placeholder="Describe the suspicious activity..." className="bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700" />
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="freeze-on-flag" checked={shouldFreezeOnFlag} onCheckedChange={(checked) => setShouldFreezeOnFlag(checked === true)} />
+                                    <label htmlFor="freeze-on-flag" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                      Also freeze this account
+                                    </label>
+                                  </div>
+                                </div>
+                                <DialogFooter>
+                                  <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                  </DialogClose>
+                                  <Button className="bg-yellow-600 hover:bg-yellow-700" onClick={() => flagUserMutation.mutate({ userId: searchedUser.id, reason: flagReason, shouldFreeze: shouldFreezeOnFlag })} disabled={flagUserMutation.isPending || !flagReason.trim()}>
+                                    Submit Flag
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </>
                         )}
                       </div>
 
