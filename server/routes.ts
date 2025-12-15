@@ -4792,5 +4792,236 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== ADMIN PLATFORM STATS ====================
+  
+  // Get admin platform stats (users by category, balances, etc.)
+  app.get("/api/admin/stats", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const totalBalance = await storage.getTotalPlatformBalance();
+      const pendingWithdrawals = await storage.getPendingWithdrawalRequests();
+      const pendingAmount = pendingWithdrawals.reduce((sum, w) => sum + parseFloat(w.amount), 0);
+      
+      // Get users created today, this week, this month
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const usersToday = allUsers.filter(u => new Date(u.createdAt) >= startOfDay).length;
+      const usersThisWeek = allUsers.filter(u => new Date(u.createdAt) >= startOfWeek).length;
+      const usersThisMonth = allUsers.filter(u => new Date(u.createdAt) >= startOfMonth).length;
+
+      // Frozen accounts count
+      const frozenAccounts = allUsers.filter(u => u.isFrozen).length;
+
+      res.json({
+        totalUsers: allUsers.length,
+        usersToday,
+        usersThisWeek,
+        usersThisMonth,
+        frozenAccounts,
+        totalBalance,
+        pendingWithdrawals: pendingAmount.toFixed(2),
+        pendingWithdrawalsCount: pendingWithdrawals.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all users for admin
+  app.get("/api/admin/users", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users.map(u => ({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        isFrozen: u.isFrozen,
+        frozenReason: u.frozenReason,
+        isActive: u.isActive,
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
+      })));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update user role (admin only)
+  app.patch("/api/admin/users/:id/role", requireAuth, requireRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+
+      const validRoles = ["customer", "vendor", "support", "dispute_admin", "finance_manager", "admin"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.updateUser(id, { role });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "user_role_changed",
+        resource: "users",
+        resourceId: id,
+        changes: { oldRole: user.role, newRole: role },
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "User role updated successfully", newRole: role });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete("/api/admin/users/:id", requireAuth, requireRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Prevent deleting yourself or other admins
+      if (user.role === "admin") {
+        return res.status(403).json({ message: "Cannot delete admin users" });
+      }
+
+      await storage.deleteUser(id);
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "user_deleted",
+        resource: "users",
+        resourceId: id,
+        changes: { deletedUser: user.username },
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin can help with withdrawals
+  app.post("/api/admin/withdrawals/:id/approve", requireAuth, requireRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const withdrawal = await storage.getWithdrawalRequest(req.params.id);
+      if (!withdrawal) {
+        return res.status(404).json({ message: "Withdrawal not found" });
+      }
+
+      if (withdrawal.status !== "pending") {
+        return res.status(400).json({ message: "Withdrawal already processed" });
+      }
+
+      await storage.updateWithdrawalRequest(req.params.id, {
+        status: "approved",
+        reviewedBy: req.user!.userId,
+        reviewedAt: new Date(),
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.userId,
+        action: "admin_withdrawal_approved",
+        resource: "withdrawal_requests",
+        resourceId: req.params.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Withdrawal approved" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all transactions (admin only)
+  app.get("/api/admin/transactions", requireAuth, requireRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const transactions = await storage.getAllTransactions();
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all wallets summary (admin only)
+  app.get("/api/admin/wallets", requireAuth, requireRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const wallets = await storage.getAllWallets();
+      const totalAvailable = wallets.reduce((sum, w) => sum + parseFloat(w.availableBalance), 0);
+      const totalEscrow = wallets.reduce((sum, w) => sum + parseFloat(w.escrowBalance), 0);
+
+      res.json({
+        wallets: wallets.slice(0, 100),
+        totalAvailable: totalAvailable.toFixed(2),
+        totalEscrow: totalEscrow.toFixed(2),
+        totalCombined: (totalAvailable + totalEscrow).toFixed(2),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== SUPPORT ORDER ROUTES ====================
+  
+  // Get order status (for support)
+  app.get("/api/support/orders", requireAuth, requireSupport, async (req: AuthRequest, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders.slice(0, 100).map(o => ({
+        id: o.id,
+        status: o.status,
+        amount: o.amount,
+        fiatAmount: o.fiatAmount,
+        currency: o.currency,
+        createdAt: o.createdAt,
+        buyerId: o.buyerId,
+        vendorId: o.vendorId,
+      })));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get order details for support
+  app.get("/api/support/orders/:id", requireAuth, requireSupport, async (req: AuthRequest, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const buyer = await storage.getUser(order.buyerId);
+      const vendorProfile = await storage.getVendorProfile(order.vendorId);
+      const vendor = vendorProfile ? await storage.getUser(vendorProfile.userId) : null;
+
+      res.json({
+        ...order,
+        buyerUsername: buyer?.username,
+        vendorUsername: vendor?.username,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

@@ -33,7 +33,16 @@ import {
   Eye,
   ShieldCheck,
   Headphones,
+  ShoppingCart,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface KycApplication {
   id: string;
@@ -78,6 +87,16 @@ interface UserProfile {
   kycStatus: string | null;
 }
 
+interface OrderData {
+  id: string;
+  buyerId: string;
+  vendorId: string;
+  status: string;
+  fiatAmount: string;
+  cryptoAmount: string;
+  createdAt: string;
+}
+
 export default function SupportPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -120,6 +139,15 @@ export default function SupportPage() {
     queryFn: async () => {
       const res = await fetchWithAuth("/api/admin/vendors/pending");
       if (!res.ok) throw new Error("Failed to fetch pending vendors");
+      return res.json();
+    },
+  });
+
+  const { data: allOrders, isLoading: loadingOrders } = useQuery<OrderData[]>({
+    queryKey: ["support-orders"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/support/orders");
+      if (!res.ok) throw new Error("Failed to fetch orders");
       return res.json();
     },
   });
@@ -288,6 +316,10 @@ export default function SupportPage() {
             <TabsTrigger value="vendors" data-testid="tab-vendors">
               <Store className="h-4 w-4 mr-2" />
               Pending Vendors
+            </TabsTrigger>
+            <TabsTrigger value="orders" data-testid="tab-orders">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Orders
             </TabsTrigger>
             <TabsTrigger value="users" data-testid="tab-users">
               <User className="h-4 w-4 mr-2" />
@@ -500,6 +532,61 @@ export default function SupportPage() {
                 </Card>
               ))
             )}
+          </TabsContent>
+
+          <TabsContent value="orders" className="space-y-4">
+            <Card className="bg-gray-100 dark:bg-gray-900/50 border-gray-300 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5" />
+                  All Orders
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingOrders ? (
+                  <Skeleton className="h-64 bg-gray-200 dark:bg-gray-800" />
+                ) : allOrders?.length === 0 ? (
+                  <p className="text-gray-600 dark:text-gray-400 text-center py-8">No orders found</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-300 dark:border-gray-700">
+                          <TableHead className="text-gray-600 dark:text-gray-400">Order ID</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Status</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Fiat Amount</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Crypto Amount</TableHead>
+                          <TableHead className="text-gray-600 dark:text-gray-400">Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allOrders?.slice(0, 50).map((order: OrderData) => (
+                          <TableRow key={order.id} className="border-gray-300 dark:border-gray-700" data-testid={`order-row-${order.id}`}>
+                            <TableCell className="text-gray-600 dark:text-gray-300 font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
+                            <TableCell>
+                              <Badge className={
+                                order.status === "completed" ? "bg-green-600" :
+                                order.status === "escrowed" ? "bg-blue-600" :
+                                order.status === "paid" ? "bg-purple-600" :
+                                order.status === "disputed" ? "bg-red-600" :
+                                "bg-yellow-600"
+                              }>
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-gray-900 dark:text-white font-medium">${order.fiatAmount}</TableCell>
+                            <TableCell className="text-gray-900 dark:text-white">{order.cryptoAmount}</TableCell>
+                            <TableCell className="text-gray-600 dark:text-gray-300">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">

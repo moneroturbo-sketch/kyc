@@ -278,6 +278,12 @@ export interface IStorage {
   searchUsersByUsername(username: string): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   getTotalPlatformBalance(): Promise<string>;
+  
+  // Admin management
+  getAllTransactions(): Promise<Transaction[]>;
+  getAllWallets(): Promise<Wallet[]>;
+  getAllOrders(): Promise<Order[]>;
+  deleteUser(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1349,6 +1355,23 @@ export class DatabaseStorage implements IStorage {
       .select({ total: sql<string>`COALESCE(SUM(${wallets.availableBalance}::numeric + ${wallets.escrowBalance}::numeric), 0)` })
       .from(wallets);
     return result[0]?.total || "0";
+  }
+
+  // Admin management
+  async getAllTransactions(): Promise<Transaction[]> {
+    return await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+  }
+
+  async getAllWallets(): Promise<Wallet[]> {
+    return await db.select().from(wallets);
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 }
 

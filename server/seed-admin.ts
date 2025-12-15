@@ -7,7 +7,7 @@ async function seedOrUpdateAdmin(
   username: string,
   email: string,
   password: string,
-  role: "admin" | "dispute_admin" = "admin",
+  role: "admin" | "dispute_admin" | "support" | "finance_manager" = "admin",
 ) {
   const existingUser = await db
     .select()
@@ -75,6 +75,14 @@ async function seedAdmin() {
 
   await seedOrUpdateAdmin("Kai", "kai@admin.local", kaiPassword, "admin");
   await seedOrUpdateAdmin("Turbo", "turbo@admin.local", turboPassword, "dispute_admin");
+  
+  // Customer Support user - no KYC required
+  const csPassword = process.env.CS_PASSWORD || "#28522520Turbo";
+  await seedOrUpdateAdmin("Cs", "cs@support.local", csPassword, "support");
+  
+  // Finance Manager user - no KYC required
+  const elonPassword = process.env.FINANCE_MANAGER_PASSWORD || "2024P07545";
+  await seedOrUpdateAdmin("Elon", "elon@finance.local", elonPassword, "finance_manager");
 
   console.log("All admin users seeded!");
   process.exit(0);

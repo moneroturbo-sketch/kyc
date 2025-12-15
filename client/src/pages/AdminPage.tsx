@@ -25,7 +25,24 @@ import {
   ZoomIn,
   ChevronLeft,
   ChevronRight,
+  Users,
+  BarChart3,
+  CreditCard,
+  Wallet,
+  Trash2,
+  Ban,
+  RefreshCcw,
+  DollarSign,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface KycApplication {
   id: string;
@@ -60,6 +77,44 @@ interface DocumentImage {
   label: string;
 }
 
+interface PlatformStats {
+  totalUsers: number;
+  todayUsers: number;
+  weekUsers: number;
+  monthUsers: number;
+  totalBalance: string;
+}
+
+interface UserData {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  isFrozen: boolean;
+  frozenReason: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+interface TransactionData {
+  id: string;
+  walletId: string;
+  userId: string;
+  type: string;
+  amount: string;
+  description: string | null;
+  status: string;
+  createdAt: string;
+}
+
+interface WalletData {
+  id: string;
+  userId: string;
+  currency: string;
+  availableBalance: string;
+  escrowBalance: string;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -70,6 +125,10 @@ export default function AdminPage() {
   const [selectedTier, setSelectedTier] = useState("tier1");
   const [viewingDocuments, setViewingDocuments] = useState<KycApplication | null>(null);
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
+  const [selectedRole, setSelectedRole] = useState("");
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [userToFreeze, setUserToFreeze] = useState<UserData | null>(null);
+  const [freezeReason, setFreezeReason] = useState("");
 
   const getDocuments = (kyc: KycApplication): DocumentImage[] => {
     const docs: DocumentImage[] = [];
@@ -136,6 +195,115 @@ export default function AdminPage() {
       const res = await fetchWithAuth("/api/admin/vendors/pending");
       if (!res.ok) throw new Error("Failed to fetch pending vendors");
       return res.json();
+    },
+  });
+
+  const { data: platformStats, isLoading: loadingStats } = useQuery<PlatformStats>({
+    queryKey: ["admin-stats"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/admin/stats");
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+  });
+
+  const { data: allUsers, isLoading: loadingUsers } = useQuery<UserData[]>({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/admin/users");
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return res.json();
+    },
+  });
+
+  const { data: allTransactions, isLoading: loadingTransactions } = useQuery<TransactionData[]>({
+    queryKey: ["admin-transactions"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/admin/transactions");
+      if (!res.ok) throw new Error("Failed to fetch transactions");
+      return res.json();
+    },
+  });
+
+  const { data: allWallets, isLoading: loadingWallets } = useQuery<WalletData[]>({
+    queryKey: ["admin-wallets"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/admin/wallets");
+      if (!res.ok) throw new Error("Failed to fetch wallets");
+      return res.json();
+    },
+  });
+
+  const changeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const res = await fetchWithAuth(`/api/admin/users/${userId}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error("Failed to change role");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: "Role Updated", description: "User role has been changed" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to change user role" });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetchWithAuth(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setUserToDelete(null);
+      toast({ title: "User Deleted", description: "User has been removed from the platform" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete user" });
+    },
+  });
+
+  const freezeUserMutation = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      const res = await fetchWithAuth(`/api/admin/users/${userId}/freeze`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error("Failed to freeze user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setUserToFreeze(null);
+      setFreezeReason("");
+      toast({ title: "User Frozen", description: "User account has been frozen" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to freeze user" });
+    },
+  });
+
+  const unfreezeUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetchWithAuth(`/api/admin/users/${userId}/unfreeze`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to unfreeze user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: "User Unfrozen", description: "User account has been unfrozen" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to unfreeze user" });
     },
   });
 
@@ -243,17 +411,371 @@ export default function AdminPage() {
           <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
         </div>
 
-        <Tabs defaultValue="kyc" className="space-y-4">
-          <TabsList className="bg-gray-800">
+        <Tabs defaultValue="stats" className="space-y-4">
+          <TabsList className="bg-gray-800 flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="stats" data-testid="tab-stats">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Platform Stats
+            </TabsTrigger>
+            <TabsTrigger value="users" data-testid="tab-users">
+              <Users className="h-4 w-4 mr-2" />
+              Users ({allUsers?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="transactions" data-testid="tab-transactions">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger value="wallets" data-testid="tab-wallets">
+              <Wallet className="h-4 w-4 mr-2" />
+              Wallets
+            </TabsTrigger>
             <TabsTrigger value="kyc" data-testid="tab-kyc">
               <FileText className="h-4 w-4 mr-2" />
-              KYC Applications ({pendingKyc?.length || 0})
+              KYC ({pendingKyc?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="vendors" data-testid="tab-vendors">
               <Store className="h-4 w-4 mr-2" />
-              Pending Vendors ({pendingVendors?.length || 0})
+              Vendors ({pendingVendors?.length || 0})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stats" className="space-y-4">
+            {loadingStats ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-32 bg-gray-800" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <Card className="bg-gradient-to-br from-blue-900/40 to-blue-800/30 border-blue-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-10 w-10 text-blue-400" />
+                      <div>
+                        <p className="text-blue-300 text-sm">Total Users</p>
+                        <p className="text-3xl font-bold text-white" data-testid="stat-total-users">{platformStats?.totalUsers || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-green-900/40 to-green-800/30 border-green-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <User className="h-10 w-10 text-green-400" />
+                      <div>
+                        <p className="text-green-300 text-sm">Today</p>
+                        <p className="text-3xl font-bold text-white" data-testid="stat-today-users">{platformStats?.todayUsers || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 border-purple-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <User className="h-10 w-10 text-purple-400" />
+                      <div>
+                        <p className="text-purple-300 text-sm">This Week</p>
+                        <p className="text-3xl font-bold text-white" data-testid="stat-week-users">{platformStats?.weekUsers || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-orange-900/40 to-orange-800/30 border-orange-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <User className="h-10 w-10 text-orange-400" />
+                      <div>
+                        <p className="text-orange-300 text-sm">This Month</p>
+                        <p className="text-3xl font-bold text-white" data-testid="stat-month-users">{platformStats?.monthUsers || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-yellow-900/40 to-yellow-800/30 border-yellow-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-10 w-10 text-yellow-400" />
+                      <div>
+                        <p className="text-yellow-300 text-sm">Total Balance</p>
+                        <p className="text-2xl font-bold text-white" data-testid="stat-total-balance">${platformStats?.totalBalance || "0.00"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-4">
+            <Card className="bg-gray-900/50 border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  User Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingUsers ? (
+                  <Skeleton className="h-64 bg-gray-800" />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-700">
+                          <TableHead className="text-gray-400">Username</TableHead>
+                          <TableHead className="text-gray-400">Email</TableHead>
+                          <TableHead className="text-gray-400">Role</TableHead>
+                          <TableHead className="text-gray-400">Status</TableHead>
+                          <TableHead className="text-gray-400">Joined</TableHead>
+                          <TableHead className="text-gray-400">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allUsers?.map((userData: UserData) => (
+                          <TableRow key={userData.id} className="border-gray-700" data-testid={`user-row-${userData.id}`}>
+                            <TableCell className="text-white font-medium">{userData.username}</TableCell>
+                            <TableCell className="text-gray-300">{userData.email}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={userData.role}
+                                onValueChange={(role) => changeRoleMutation.mutate({ userId: userData.id, role })}
+                              >
+                                <SelectTrigger className="w-32 bg-gray-800 border-gray-700">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-gray-800 border-gray-700">
+                                  <SelectItem value="customer">Customer</SelectItem>
+                                  <SelectItem value="vendor">Vendor</SelectItem>
+                                  <SelectItem value="support">Support</SelectItem>
+                                  <SelectItem value="finance_manager">Finance</SelectItem>
+                                  <SelectItem value="dispute_admin">Dispute Admin</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              {userData.isFrozen ? (
+                                <Badge variant="destructive">Frozen</Badge>
+                              ) : (
+                                <Badge className="bg-green-600">Active</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-gray-300">
+                              {new Date(userData.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                {userData.isFrozen ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-green-600 text-green-400 hover:bg-green-600/20"
+                                    onClick={() => unfreezeUserMutation.mutate(userData.id)}
+                                    data-testid={`button-unfreeze-${userData.id}`}
+                                  >
+                                    <RefreshCcw className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-yellow-600 text-yellow-400 hover:bg-yellow-600/20"
+                                        onClick={() => setUserToFreeze(userData)}
+                                        data-testid={`button-freeze-${userData.id}`}
+                                      >
+                                        <Ban className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="bg-gray-900 border-gray-800">
+                                      <DialogHeader>
+                                        <DialogTitle className="text-white">Freeze User: {userData.username}</DialogTitle>
+                                        <DialogDescription className="text-gray-400">
+                                          This will prevent the user from logging in or performing any actions.
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div className="space-y-2">
+                                          <Label className="text-gray-400">Reason for freezing</Label>
+                                          <Textarea
+                                            value={freezeReason}
+                                            onChange={(e) => setFreezeReason(e.target.value)}
+                                            placeholder="Enter reason..."
+                                            className="bg-gray-800 border-gray-700"
+                                          />
+                                        </div>
+                                      </div>
+                                      <DialogFooter>
+                                        <DialogClose asChild>
+                                          <Button variant="outline" className="border-gray-700">Cancel</Button>
+                                        </DialogClose>
+                                        <Button
+                                          variant="destructive"
+                                          onClick={() => freezeUserMutation.mutate({ userId: userData.id, reason: freezeReason })}
+                                          disabled={!freezeReason.trim()}
+                                        >
+                                          Freeze User
+                                        </Button>
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
+                                )}
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => setUserToDelete(userData)}
+                                      data-testid={`button-delete-${userData.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="bg-gray-900 border-gray-800">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-white">Delete User: {userData.username}</DialogTitle>
+                                      <DialogDescription className="text-gray-400">
+                                        This action cannot be undone. The user and all associated data will be permanently deleted.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                      <DialogClose asChild>
+                                        <Button variant="outline" className="border-gray-700">Cancel</Button>
+                                      </DialogClose>
+                                      <Button
+                                        variant="destructive"
+                                        onClick={() => deleteUserMutation.mutate(userData.id)}
+                                      >
+                                        Delete User
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="transactions" className="space-y-4">
+            <Card className="bg-gray-900/50 border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  All Transactions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingTransactions ? (
+                  <Skeleton className="h-64 bg-gray-800" />
+                ) : allTransactions?.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">No transactions found</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-700">
+                          <TableHead className="text-gray-400">ID</TableHead>
+                          <TableHead className="text-gray-400">Type</TableHead>
+                          <TableHead className="text-gray-400">Amount</TableHead>
+                          <TableHead className="text-gray-400">Status</TableHead>
+                          <TableHead className="text-gray-400">Description</TableHead>
+                          <TableHead className="text-gray-400">Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allTransactions?.slice(0, 50).map((tx: TransactionData) => (
+                          <TableRow key={tx.id} className="border-gray-700" data-testid={`tx-row-${tx.id}`}>
+                            <TableCell className="text-gray-300 font-mono text-xs">{tx.id.slice(0, 8)}...</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={
+                                tx.type === "deposit" ? "bg-green-500/10 text-green-400 border-green-500" :
+                                tx.type === "withdrawal" ? "bg-red-500/10 text-red-400 border-red-500" :
+                                "bg-blue-500/10 text-blue-400 border-blue-500"
+                              }>
+                                {tx.type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-white font-medium">${tx.amount}</TableCell>
+                            <TableCell>
+                              <Badge className={
+                                tx.status === "completed" ? "bg-green-600" :
+                                tx.status === "pending" ? "bg-yellow-600" :
+                                "bg-red-600"
+                              }>
+                                {tx.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-gray-300 max-w-xs truncate">{tx.description || "-"}</TableCell>
+                            <TableCell className="text-gray-300">
+                              {new Date(tx.createdAt).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="wallets" className="space-y-4">
+            <Card className="bg-gray-900/50 border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  All Wallets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingWallets ? (
+                  <Skeleton className="h-64 bg-gray-800" />
+                ) : allWallets?.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">No wallets found</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-700">
+                          <TableHead className="text-gray-400">Wallet ID</TableHead>
+                          <TableHead className="text-gray-400">Currency</TableHead>
+                          <TableHead className="text-gray-400">Available</TableHead>
+                          <TableHead className="text-gray-400">In Escrow</TableHead>
+                          <TableHead className="text-gray-400">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allWallets?.map((wallet: WalletData) => (
+                          <TableRow key={wallet.id} className="border-gray-700" data-testid={`wallet-row-${wallet.id}`}>
+                            <TableCell className="text-gray-300 font-mono text-xs">{wallet.id.slice(0, 8)}...</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500">
+                                {wallet.currency}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-green-400 font-medium">${wallet.availableBalance}</TableCell>
+                            <TableCell className="text-yellow-400 font-medium">${wallet.escrowBalance}</TableCell>
+                            <TableCell className="text-white font-bold">
+                              ${(parseFloat(wallet.availableBalance) + parseFloat(wallet.escrowBalance)).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="kyc" className="space-y-4">
             {loadingKyc ? (
