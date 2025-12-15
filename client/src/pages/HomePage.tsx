@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { isAuthenticated, getUser, fetchWithAuth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/marketplace/ThemeToggle";
 import SocialFeed from "@/components/social/SocialFeed";
@@ -34,6 +35,7 @@ import {
 interface Offer {
   id: string;
   vendorId: string;
+  vendorUserId: string;
   vendorName?: string;
   vendorTrades?: number;
   vendorCompletionRate?: number;
@@ -273,9 +275,14 @@ export default function HomePage() {
                   <Skeleton key={i} className="h-40 bg-muted" />
                 ))}
               </div>
-            ) : offers && offers.length > 0 ? (
+            ) : offers && offers.length > 0 ? (() => {
+              const currentUser = getUser();
+              const currentUserId = currentUser?.id;
+              return (
               <div className="divide-y divide-border">
-                {offers.map((offer) => (
+                {offers.map((offer) => {
+                  const isOwnAd = currentUserId && offer.vendorUserId === currentUserId;
+                  return (
                   <div
                     key={offer.id}
                     className={`p-4 ${offer.isPriority ? "bg-amber-500/10 border-l-4 border-amber-400" : "bg-background"}`}
@@ -333,19 +340,27 @@ export default function HomePage() {
                           <Clock className="h-3 w-3" />
                           <span>{offer.responseTime || 15} min</span>
                         </div>
-                        <Button
-                          className={`${activeTab === "buy" ? "bg-primary hover:bg-primary/90" : "bg-red-500 hover:bg-red-600"} text-primary-foreground px-8 py-2 rounded-md font-medium mt-2`}
-                          onClick={() => handleTradeClick(offer)}
-                          data-testid={`button-trade-${offer.id}`}
-                        >
-                          {activeTab === "buy" ? "Buy" : "Sell"}
-                        </Button>
+                        {isOwnAd ? (
+                          <Badge className="bg-muted text-muted-foreground px-4 py-2 mt-2">
+                            Your Ad
+                          </Badge>
+                        ) : (
+                          <Button
+                            className={`${activeTab === "buy" ? "bg-primary hover:bg-primary/90" : "bg-red-500 hover:bg-red-600"} text-primary-foreground px-8 py-2 rounded-md font-medium mt-2`}
+                            onClick={() => handleTradeClick(offer)}
+                            data-testid={`button-trade-${offer.id}`}
+                          >
+                            {activeTab === "buy" ? "Buy" : "Sell"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
-            ) : (
+              );
+            })() : (
               <div className="flex flex-col items-center justify-center py-20">
                 <Filter className="h-16 w-16 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground text-lg">No accounts found</p>

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { fetchWithAuth } from "@/lib/auth";
+import { fetchWithAuth, getUser } from "@/lib/auth";
 import {
   ArrowLeftRight,
   Shield,
@@ -118,6 +118,28 @@ export default function TradePage() {
         <div className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
           <p className="text-white text-xl">Offer not found</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const currentUser = getUser();
+  const isOwnAd = currentUser && offer.vendorUserId === currentUser.id;
+
+  if (isOwnAd) {
+    return (
+      <Layout>
+        <div className="text-center py-12">
+          <AlertCircle className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+          <p className="text-white text-xl">This is your own ad</p>
+          <p className="text-gray-400 mt-2">You cannot trade on your own advertisement</p>
+          <Button 
+            className="mt-4"
+            onClick={() => setLocation("/")}
+            data-testid="button-back-home"
+          >
+            Back to Marketplace
+          </Button>
         </div>
       </Layout>
     );

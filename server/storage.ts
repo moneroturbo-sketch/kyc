@@ -440,7 +440,11 @@ export class DatabaseStorage implements IStorage {
       .from(offers)
       .innerJoin(vendorProfiles, eq(offers.vendorId, vendorProfiles.id))
       .innerJoin(users, eq(vendorProfiles.userId, users.id))
-      .where(and(eq(offers.isActive, true), eq(vendorProfiles.isApproved, true)))
+      .where(and(
+        eq(offers.isActive, true), 
+        eq(vendorProfiles.isApproved, true),
+        sql`CAST(${offers.availableAmount} AS DECIMAL(18,8)) > 0`
+      ))
       .$dynamic();
 
     if (filters?.type) {
