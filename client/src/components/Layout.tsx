@@ -26,6 +26,8 @@ import {
   Store,
   Gavel,
   AlertTriangle,
+  Clock,
+  Lock,
 } from "lucide-react";
 
 interface LayoutProps {
