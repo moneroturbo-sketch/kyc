@@ -405,6 +405,22 @@ async function createTablesIfNotExist() {
       created_at TIMESTAMP NOT NULL DEFAULT now(),
       resolved_at TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS withdrawal_requests (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR NOT NULL REFERENCES users(id),
+      wallet_id VARCHAR NOT NULL REFERENCES wallets(id),
+      amount NUMERIC(18, 8) NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USDT',
+      status TEXT NOT NULL DEFAULT 'pending',
+      wallet_address TEXT,
+      network TEXT,
+      tx_hash TEXT,
+      admin_notes TEXT,
+      reviewed_by VARCHAR REFERENCES users(id),
+      reviewed_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
   `);
 }
 

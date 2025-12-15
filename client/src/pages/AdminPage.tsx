@@ -230,7 +230,8 @@ export default function AdminPage() {
     queryFn: async () => {
       const res = await fetchWithAuth("/api/admin/wallets");
       if (!res.ok) throw new Error("Failed to fetch wallets");
-      return res.json();
+      const data = await res.json();
+      return data.wallets || [];
     },
   });
 
