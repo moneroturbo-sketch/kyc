@@ -1896,6 +1896,84 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Blockchain dashboard (alternate route for frontend)
+  app.get("/api/admin/blockchain/dashboard", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      let controls = await storage.getPlatformWalletControls();
+      if (!controls) {
+        controls = await storage.initPlatformWalletControls();
+      }
+
+      const { getMasterWalletBalance, getMasterWalletBnbBalance, isMasterWalletUnlocked } = await import("./services/blockchain");
+      const MASTER_WALLET_ADDRESS = process.env.MASTER_WALLET_ADDRESS || "";
+      
+      res.json({
+        ...controls,
+        masterWalletAddress: MASTER_WALLET_ADDRESS,
+        masterWalletUsdtBalance: await getMasterWalletBalance(),
+        masterWalletBnbBalance: await getMasterWalletBnbBalance(),
+        isWalletUnlocked: isMasterWalletUnlocked(),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Unlock master wallet (alternate route for frontend)
+  app.post("/api/admin/blockchain/unlock-wallet", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { unlockMasterWallet } = await import("./services/blockchain");
+      const success = unlockMasterWallet();
+
+      if (!success) {
+        return res.status(500).json({ message: "Failed to unlock master wallet. Check that MASTER_WALLET_PRIVATE_KEY and MASTER_WALLET_ADDRESS are configured correctly." });
+      }
+
+      await storage.updatePlatformWalletControls({
+        walletUnlocked: true,
+        unlockedAt: new Date(),
+        unlockedBy: req.user!.userId,
+      });
+
+      await storage.createBlockchainAdminAction({
+        adminId: req.user!.userId,
+        action: "master_wallet_unlocked",
+        targetType: "platform_controls",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Master wallet unlocked" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Lock master wallet (alternate route for frontend)
+  app.post("/api/admin/blockchain/lock-wallet", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
+    try {
+      const { lockMasterWallet } = await import("./services/blockchain");
+      lockMasterWallet();
+
+      await storage.updatePlatformWalletControls({
+        walletUnlocked: false,
+      });
+
+      await storage.createBlockchainAdminAction({
+        adminId: req.user!.userId,
+        action: "master_wallet_locked",
+        targetType: "platform_controls",
+        reason: req.body.reason,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Master wallet locked" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin: Get blockchain admin action logs
   app.get("/api/admin/blockchain-logs", requireAuth, requireFinanceManager, async (req: AuthRequest, res) => {
     try {
