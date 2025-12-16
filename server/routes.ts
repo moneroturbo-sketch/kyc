@@ -1454,7 +1454,7 @@ export async function registerRoutes(
 
   // ==================== BLOCKCHAIN WALLET ROUTES ====================
 
-  // Get or create user deposit address (always generates a fresh address with no prior transactions)
+  // Get or create user deposit address (one permanent address per user, clean with no prior transactions)
   app.get("/api/wallet/deposit-address", requireAuth, requireDepositsEnabled, async (req: AuthRequest, res) => {
     try {
       const controls = await storage.getPlatformWalletControls();
@@ -1468,39 +1468,43 @@ export async function registerRoutes(
         return res.status(503).json({ message: "Deposit system is not configured. Please contact support." });
       }
 
-      // Generate addresses until we find one with no prior transactions
-      const MAX_ATTEMPTS = 50;
-      let depositAddress = null;
-      
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const derivationIndex = await storage.getAndIncrementDerivationIndex();
-        const generated = generateDepositAddress(derivationIndex);
-        
-        // Check if address has any prior transactions on the blockchain
-        const { hasTransactions } = await checkAddressHasTransactions(generated.address);
-        
-        if (!hasTransactions) {
-          // Found a clean address with no transactions
-          const encryptedKey = encryptPrivateKey(generated.privateKey);
-          
-          depositAddress = await storage.createUserDepositAddress({
-            userId: req.user!.userId,
-            address: generated.address,
-            network: "BSC",
-            derivationIndex,
-            encryptedPrivateKey: encryptedKey,
-          });
-          
-          console.log(`[Deposit] Generated clean address ${generated.address} at index ${derivationIndex} (attempt ${attempt + 1})`);
-          break;
-        } else {
-          console.log(`[Deposit] Skipping address ${generated.address} at index ${derivationIndex} - has prior transactions`);
-        }
-      }
+      // Check if user already has a deposit address - return it as their lifetime address
+      let depositAddress = await storage.getUserDepositAddress(req.user!.userId, "BSC");
       
       if (!depositAddress) {
-        console.error("[Deposit] Failed to find clean address after maximum attempts");
-        return res.status(503).json({ message: "Unable to generate a clean deposit address. Please try again later." });
+        // First time - generate a clean address with no prior transactions
+        const MAX_ATTEMPTS = 50;
+        
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+          const derivationIndex = await storage.getAndIncrementDerivationIndex();
+          const generated = generateDepositAddress(derivationIndex);
+          
+          // Check if address has any prior transactions on the blockchain
+          const { hasTransactions } = await checkAddressHasTransactions(generated.address);
+          
+          if (!hasTransactions) {
+            // Found a clean address with no transactions - this becomes their lifetime address
+            const encryptedKey = encryptPrivateKey(generated.privateKey);
+            
+            depositAddress = await storage.createUserDepositAddress({
+              userId: req.user!.userId,
+              address: generated.address,
+              network: "BSC",
+              derivationIndex,
+              encryptedPrivateKey: encryptedKey,
+            });
+            
+            console.log(`[Deposit] Assigned lifetime address ${generated.address} to user ${req.user!.userId} at index ${derivationIndex} (attempt ${attempt + 1})`);
+            break;
+          } else {
+            console.log(`[Deposit] Skipping address ${generated.address} at index ${derivationIndex} - has prior transactions`);
+          }
+        }
+        
+        if (!depositAddress) {
+          console.error("[Deposit] Failed to find clean address after maximum attempts");
+          return res.status(503).json({ message: "Unable to generate a clean deposit address. Please try again later." });
+        }
       }
 
       res.json({
