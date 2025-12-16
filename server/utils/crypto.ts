@@ -124,10 +124,6 @@ export const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 export const BSC_CHAIN_ID = 56;
 
 const BSC_RPC_URL = process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org/";
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY;
-const BSCSCAN_API_URL = BSCSCAN_API_KEY 
-  ? `https://api.etherscan.io/v2/api?chainid=56`
-  : "https://api.bscscan.com/api";
 
 export async function checkAddressHasTransactions(address: string): Promise<{ hasTransactions: boolean; error?: string }> {
   try {
@@ -142,71 +138,6 @@ export async function checkAddressHasTransactions(address: string): Promise<{ ha
     const balance = await provider.getBalance(address);
     if (balance > BigInt(0)) {
       console.log(`Address ${address} has non-zero BNB balance - skipping`);
-      return { hasTransactions: true };
-    }
-
-    if (!BSCSCAN_API_KEY) {
-      console.error("BSCSCAN_API_KEY is not configured - cannot verify address cleanliness");
-      return { hasTransactions: false, error: "BSCSCAN_API_KEY not configured" };
-    }
-
-    const bep20Url = BSCSCAN_API_KEY 
-      ? `${BSCSCAN_API_URL}&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
-      : `${BSCSCAN_API_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=1`;
-    const bep20Response = await fetch(bep20Url);
-    
-    if (!bep20Response.ok) {
-      console.error(`BscScan BEP20 API request failed: ${bep20Response.status}`);
-      return { hasTransactions: false, error: "BscScan API request failed" };
-    }
-    
-    const bep20Data = await bep20Response.json();
-    if (bep20Data.message === "NOTOK") {
-      console.error(`BscScan API error: ${bep20Data.result}`);
-      return { hasTransactions: false, error: `BscScan API error: ${bep20Data.result}` };
-    }
-    if (bep20Data.status === "1" && Array.isArray(bep20Data.result) && bep20Data.result.length > 0) {
-      console.log(`Address ${address} has BEP20 token transactions - skipping`);
-      return { hasTransactions: true };
-    }
-
-    const internalTxUrl = BSCSCAN_API_KEY
-      ? `${BSCSCAN_API_URL}&module=account&action=txlistinternal&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
-      : `${BSCSCAN_API_URL}?module=account&action=txlistinternal&address=${address}&startblock=0&endblock=99999999&page=1&offset=1`;
-    const internalTxResponse = await fetch(internalTxUrl);
-    
-    if (!internalTxResponse.ok) {
-      console.error(`BscScan internal tx API request failed: ${internalTxResponse.status}`);
-      return { hasTransactions: false, error: "BscScan API request failed" };
-    }
-    
-    const internalData = await internalTxResponse.json();
-    if (internalData.message === "NOTOK") {
-      console.error(`BscScan API error: ${internalData.result}`);
-      return { hasTransactions: false, error: `BscScan API error: ${internalData.result}` };
-    }
-    if (internalData.status === "1" && Array.isArray(internalData.result) && internalData.result.length > 0) {
-      console.log(`Address ${address} has internal transactions - skipping`);
-      return { hasTransactions: true };
-    }
-
-    const normalTxUrl = BSCSCAN_API_KEY
-      ? `${BSCSCAN_API_URL}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
-      : `${BSCSCAN_API_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1`;
-    const normalTxResponse = await fetch(normalTxUrl);
-    
-    if (!normalTxResponse.ok) {
-      console.error(`BscScan normal tx API request failed: ${normalTxResponse.status}`);
-      return { hasTransactions: false, error: "BscScan API request failed" };
-    }
-    
-    const normalData = await normalTxResponse.json();
-    if (normalData.message === "NOTOK") {
-      console.error(`BscScan API error: ${normalData.result}`);
-      return { hasTransactions: false, error: `BscScan API error: ${normalData.result}` };
-    }
-    if (normalData.status === "1" && Array.isArray(normalData.result) && normalData.result.length > 0) {
-      console.log(`Address ${address} has normal transactions from BscScan - skipping`);
       return { hasTransactions: true };
     }
 
