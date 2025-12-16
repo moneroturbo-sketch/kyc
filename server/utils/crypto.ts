@@ -124,8 +124,10 @@ export const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 export const BSC_CHAIN_ID = 56;
 
 const BSC_RPC_URL = process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org/";
-const BSCSCAN_API_URL = "https://api.bscscan.com/api";
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY;
+const BSCSCAN_API_URL = BSCSCAN_API_KEY 
+  ? `https://api.etherscan.io/v2/api?chainid=56`
+  : "https://api.bscscan.com/api";
 
 export async function checkAddressHasTransactions(address: string): Promise<{ hasTransactions: boolean; error?: string }> {
   try {
@@ -148,9 +150,10 @@ export async function checkAddressHasTransactions(address: string): Promise<{ ha
       return { hasTransactions: false, error: "BSCSCAN_API_KEY not configured" };
     }
 
-    const bep20Response = await fetch(
-      `${BSCSCAN_API_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
-    );
+    const bep20Url = BSCSCAN_API_KEY 
+      ? `${BSCSCAN_API_URL}&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
+      : `${BSCSCAN_API_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=1`;
+    const bep20Response = await fetch(bep20Url);
     
     if (!bep20Response.ok) {
       console.error(`BscScan BEP20 API request failed: ${bep20Response.status}`);
@@ -167,9 +170,10 @@ export async function checkAddressHasTransactions(address: string): Promise<{ ha
       return { hasTransactions: true };
     }
 
-    const internalTxResponse = await fetch(
-      `${BSCSCAN_API_URL}?module=account&action=txlistinternal&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
-    );
+    const internalTxUrl = BSCSCAN_API_KEY
+      ? `${BSCSCAN_API_URL}&module=account&action=txlistinternal&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
+      : `${BSCSCAN_API_URL}?module=account&action=txlistinternal&address=${address}&startblock=0&endblock=99999999&page=1&offset=1`;
+    const internalTxResponse = await fetch(internalTxUrl);
     
     if (!internalTxResponse.ok) {
       console.error(`BscScan internal tx API request failed: ${internalTxResponse.status}`);
@@ -186,9 +190,10 @@ export async function checkAddressHasTransactions(address: string): Promise<{ ha
       return { hasTransactions: true };
     }
 
-    const normalTxResponse = await fetch(
-      `${BSCSCAN_API_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
-    );
+    const normalTxUrl = BSCSCAN_API_KEY
+      ? `${BSCSCAN_API_URL}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&apikey=${BSCSCAN_API_KEY}`
+      : `${BSCSCAN_API_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1`;
+    const normalTxResponse = await fetch(normalTxUrl);
     
     if (!normalTxResponse.ok) {
       console.error(`BscScan normal tx API request failed: ${normalTxResponse.status}`);
