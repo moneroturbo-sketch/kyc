@@ -135,6 +135,134 @@ interface MaintenanceSettings {
   updatedAt: string;
 }
 
+interface WalletDashboard {
+  masterWalletAddress: string;
+  usdtBalance: string;
+  bnbBalance: string;
+  isWalletUnlocked: boolean;
+}
+
+function WalletControlsSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: walletDashboard, isLoading } = useQuery<WalletDashboard>({
+    queryKey: ["admin-wallet-dashboard"],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/admin/blockchain/dashboard");
+      if (!res.ok) throw new Error("Failed to fetch wallet dashboard");
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
+
+  const unlockWalletMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetchWithAuth("/api/admin/blockchain/unlock-wallet", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to unlock wallet");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Master wallet unlocked", description: "Withdrawals can now be processed" });
+      queryClient.invalidateQueries({ queryKey: ["admin-wallet-dashboard"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to unlock wallet", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const lockWalletMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetchWithAuth("/api/admin/blockchain/lock-wallet", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to lock wallet");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Master wallet locked", description: "Withdrawals are now disabled" });
+      queryClient.invalidateQueries({ queryKey: ["admin-wallet-dashboard"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to lock wallet", description: error.message, variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return <Skeleton className="h-32 bg-gray-800" />;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className={`p-4 rounded-lg border ${
+        walletDashboard?.isWalletUnlocked 
+          ? "bg-green-900/20 border-green-700" 
+          : "bg-red-900/20 border-red-700"
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {walletDashboard?.isWalletUnlocked ? (
+              <Unlock className="h-6 w-6 text-green-400" />
+            ) : (
+              <Lock className="h-6 w-6 text-red-400" />
+            )}
+            <div>
+              <p className={`font-bold ${walletDashboard?.isWalletUnlocked ? "text-green-400" : "text-red-400"}`}>
+                {walletDashboard?.isWalletUnlocked ? "Wallet UNLOCKED" : "Wallet LOCKED"}
+              </p>
+              <p className="text-gray-400 text-sm">
+                {walletDashboard?.isWalletUnlocked 
+                  ? "Withdrawals can be processed" 
+                  : "Withdrawals are disabled until wallet is unlocked"}
+              </p>
+            </div>
+          </div>
+          {walletDashboard?.isWalletUnlocked ? (
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => lockWalletMutation.mutate()}
+              disabled={lockWalletMutation.isPending}
+              data-testid="button-lock-wallet"
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              Lock Wallet
+            </Button>
+          ) : (
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => unlockWalletMutation.mutate()}
+              disabled={unlockWalletMutation.isPending}
+              data-testid="button-unlock-wallet"
+            >
+              <Unlock className="h-4 w-4 mr-2" />
+              Unlock Wallet
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 bg-gray-800 rounded-lg">
+          <p className="text-gray-400 text-sm">Master Wallet Address</p>
+          <p className="text-white font-mono text-xs break-all">{walletDashboard?.masterWalletAddress || "Not configured"}</p>
+        </div>
+        <div className="p-4 bg-gray-800 rounded-lg">
+          <p className="text-gray-400 text-sm">USDT Balance</p>
+          <p className="text-white font-bold">{walletDashboard?.usdtBalance || "0.00"} USDT</p>
+        </div>
+        <div className="p-4 bg-gray-800 rounded-lg">
+          <p className="text-gray-400 text-sm">BNB Balance (Gas)</p>
+          <p className="text-white font-bold">{walletDashboard?.bnbBalance || "0.00"} BNB</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1385,6 +1513,19 @@ export default function AdminPage() {
                     )}
                   </>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Master Wallet Controls */}
+            <Card className="bg-gray-900/50 border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Master Wallet Controls
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <WalletControlsSection />
               </CardContent>
             </Card>
 
