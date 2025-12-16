@@ -6,6 +6,7 @@ import { createServer } from "http";
 import { initializeDatabase } from "./init-db";
 import compression from "compression";
 import { storage } from "./storage";
+import { startDepositScanner } from "./services/depositScanner";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -99,6 +100,9 @@ app.use((req, res, next) => {
   
   // Run cleanup every hour
   setInterval(cleanupOldPosts, 60 * 60 * 1000);
+
+  // Start deposit scanner - runs every 60 seconds to detect and credit deposits
+  startDepositScanner(60000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

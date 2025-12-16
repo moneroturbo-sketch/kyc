@@ -310,6 +310,7 @@ export interface IStorage {
   getUserDepositAddressByAddress(address: string): Promise<UserDepositAddress | undefined>;
   createUserDepositAddress(address: InsertUserDepositAddress): Promise<UserDepositAddress>;
   getNextDerivationIndex(): Promise<number>;
+  getAllActiveDepositAddresses(): Promise<UserDepositAddress[]>;
 
   // Blockchain Wallet - Deposits
   getBlockchainDeposit(id: string): Promise<BlockchainDeposit | undefined>;
@@ -1484,6 +1485,13 @@ export class DatabaseStorage implements IStorage {
       .select({ maxIndex: sql<number>`COALESCE(MAX(${userDepositAddresses.derivationIndex}), -1)` })
       .from(userDepositAddresses);
     return (result[0]?.maxIndex || 0) + 1;
+  }
+
+  async getAllActiveDepositAddresses(): Promise<UserDepositAddress[]> {
+    return await db
+      .select()
+      .from(userDepositAddresses)
+      .where(eq(userDepositAddresses.isActive, true));
   }
 
   // Blockchain Wallet - Deposits
