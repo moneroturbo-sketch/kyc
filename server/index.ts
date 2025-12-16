@@ -7,6 +7,7 @@ import { initializeDatabase } from "./init-db";
 import compression from "compression";
 import { storage } from "./storage";
 import { startDepositScanner } from "./services/depositScanner";
+import { restoreMasterWalletState } from "./services/blockchain";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -82,6 +83,9 @@ app.use((req, res, next) => {
 (async () => {
   await initializeDatabase();
   await registerRoutes(httpServer, app);
+  
+  // Restore master wallet lock state from database
+  await restoreMasterWalletState();
 
   // Auto-delete posts older than 24 hours - run on startup and every hour
   const cleanupOldPosts = async () => {

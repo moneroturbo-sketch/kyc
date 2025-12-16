@@ -77,6 +77,24 @@ export function isMasterWalletUnlocked(): boolean {
   return isWalletUnlocked && masterWallet !== null;
 }
 
+export async function restoreMasterWalletState(): Promise<void> {
+  try {
+    const controls = await storage.getPlatformWalletControls();
+    if (controls?.walletUnlocked) {
+      const success = unlockMasterWallet();
+      if (success) {
+        console.log("Master wallet state restored from database - unlocked");
+      } else {
+        console.log("Failed to restore master wallet unlock state");
+      }
+    } else {
+      console.log("Master wallet state: locked (per database setting)");
+    }
+  } catch (error) {
+    console.error("Failed to restore master wallet state:", error);
+  }
+}
+
 export async function getMasterWalletBalance(): Promise<string> {
   try {
     const usdtContract = new ethers.Contract(USDT_BEP20_CONTRACT, ERC20_ABI, getProvider());
@@ -280,7 +298,7 @@ export async function monitorDepositAddress(
   }
 }
 
-const MIN_BNB_FOR_SWEEP = "0.0005";
+const MIN_BNB_FOR_SWEEP = "0.000034";
 
 export async function sweepDepositToMaster(
   depositAddressPrivateKey: string,
