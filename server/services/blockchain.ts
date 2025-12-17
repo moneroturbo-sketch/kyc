@@ -406,7 +406,8 @@ export async function monitorDepositAddress(
   }
 }
 
-const MIN_BNB_FOR_SWEEP = "0.000034";
+const SWEEP_GAS_LIMIT = 100000;
+const GAS_BUFFER_MULTIPLIER = BigInt(2);
 
 export async function sweepDepositToMaster(
   depositAddressPrivateKey: string,
@@ -426,36 +427,42 @@ export async function sweepDepositToMaster(
     const depositWallet = new ethers.Wallet(decryptedKey, getProvider());
     const depositAddress = depositWallet.address;
 
+    const feeData = await getProvider().getFeeData();
+    const gasPrice = feeData.gasPrice ? feeData.gasPrice * GAS_BUFFER_MULTIPLIER : ethers.parseUnits("5", "gwei");
+    const requiredGasCost = gasPrice * BigInt(SWEEP_GAS_LIMIT);
+    
     const bnbBalance = await getProvider().getBalance(depositAddress);
-    const minBnbWei = ethers.parseEther(MIN_BNB_FOR_SWEEP);
     let gasFundingTxHash: string | undefined;
 
-    if (bnbBalance < minBnbWei) {
-      console.log(`[Sweep] Deposit address ${depositAddress} needs gas funding. Current BNB: ${ethers.formatEther(bnbBalance)}`);
+    console.log(`[Sweep] Address ${depositAddress} - BNB balance: ${ethers.formatEther(bnbBalance)}, Required gas: ${ethers.formatEther(requiredGasCost)}`);
+
+    if (bnbBalance < requiredGasCost) {
+      console.log(`[Sweep] Insufficient gas. Funding from master wallet...`);
       
       if (!isWalletUnlocked || !masterWallet) {
         return { success: false, error: "Master wallet must be unlocked to fund gas for sweeps" };
       }
 
-      const fundResult = await fundAddressWithGas(depositAddress);
+      const fundingAmount = requiredGasCost - bnbBalance + ethers.parseUnits("0.0001", "ether");
+      const fundResult = await fundAddressWithGas(depositAddress, ethers.formatEther(fundingAmount));
+      
       if (!fundResult.success) {
         return { success: false, error: `Failed to fund gas: ${fundResult.error}` };
       }
       
       gasFundingTxHash = fundResult.txHash;
-      console.log(`[Sweep] Funded ${depositAddress} with gas (TX: ${gasFundingTxHash})`);
+      console.log(`[Sweep] Funded ${depositAddress} with ${ethers.formatEther(fundingAmount)} BNB (TX: ${gasFundingTxHash})`);
       
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    } else {
+      console.log(`[Sweep] Sufficient gas available. Proceeding with sweep...`);
     }
 
     const usdtContract = new ethers.Contract(USDT_BEP20_CONTRACT, ERC20_ABI, depositWallet);
     const amountWei = ethers.parseUnits(amount, 18);
-
-    const feeData = await getProvider().getFeeData();
-    const gasPrice = feeData.gasPrice ? feeData.gasPrice * BigInt(2) : ethers.parseUnits("5", "gwei");
     
     const tx = await usdtContract.transfer(SWEEP_WALLET_ADDRESS, amountWei, {
-      gasLimit: 100000,
+      gasLimit: SWEEP_GAS_LIMIT,
       gasPrice: gasPrice,
     });
     const receipt = await tx.wait();
