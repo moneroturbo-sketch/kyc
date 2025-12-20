@@ -103,12 +103,13 @@ export default function LoadersZone() {
       setDealAmount("");
       return;
     }
-    // Only allow digits and one decimal point, no scientific notation
-    if (!/^[0-9]*\.?[0-9]*$/.test(value)) {
-      return;
+    // Only allow positive decimal numbers (e.g., 1, 7.5, 100.25) - no negative signs or invalid chars
+    if (!/^\d+(\.\d{0,8})?$/.test(value)) {
+      return; // Reject invalid input silently
     }
     const num = parseFloat(value);
-    if (!isNaN(num) && num >= 0) {
+    // Minimum deal amount is 1 USDT
+    if (!isNaN(num) && num >= 1) {
       setDealAmount(value);
     }
   };
@@ -118,12 +119,13 @@ export default function LoadersZone() {
       setUpfrontPercentage("");
       return;
     }
-    // Only allow digits, no decimal or scientific notation
-    if (!/^[0-9]+$/.test(value)) {
-      return;
+    // Only allow positive integers (0-100)
+    if (!/^\d+$/.test(value)) {
+      return; // Reject invalid input silently
     }
     const num = parseInt(value);
-    if (!isNaN(num) && num >= 0 && num <= 100) {
+    // Minimum receiver upfront requirement is 10%
+    if (!isNaN(num) && num >= 10 && num <= 100) {
       setUpfrontPercentage(value);
     }
   };
