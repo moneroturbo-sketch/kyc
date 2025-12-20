@@ -297,10 +297,16 @@ export default function HomePage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {(offer.vendorName || "V")[0].toUpperCase()}
-                          </div>
-                          <span className="font-medium text-foreground">{offer.vendorName || `Vendor_${offer.vendorId.slice(0, 6)}`}</span>
+                          <button
+                            onClick={() => setLocation(`/profile?id=${offer.vendorUserId}`)}
+                            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                            data-testid={`profile-link-vendor-${offer.vendorUserId}`}
+                          >
+                            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                              {(offer.vendorName || "V")[0].toUpperCase()}
+                            </div>
+                            <span className="font-medium text-foreground">{offer.vendorName || `Vendor_${offer.vendorId.slice(0, 6)}`}</span>
+                          </button>
                           {offer.vendorVerified && (
                             <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                               <span className="text-primary-foreground text-xs">✓</span>

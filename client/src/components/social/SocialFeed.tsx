@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -127,6 +128,7 @@ function PostCard({
   isDisliked: boolean;
 }) {
   const user = getUser();
+  const [, setLocation] = useLocation();
   const isAuthor = user?.id === post.authorId;
   const isAdmin = user?.role === "admin";
   const canDelete = isAuthor || isAdmin;
@@ -137,7 +139,11 @@ function PostCard({
       data-testid={`post-card-${post.id}`}
     >
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
+        <button 
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left flex-1"
+          onClick={() => setLocation(`/profile?id=${post.author.id}`)}
+          data-testid={`profile-link-${post.author.id}`}
+        >
           <AuthorAvatar author={post.author} />
           <div>
             <div className="flex items-center gap-1">
@@ -152,7 +158,7 @@ function PostCard({
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </span>
           </div>
-        </div>
+        </button>
         {canDelete && (
           <Button
             variant="ghost"

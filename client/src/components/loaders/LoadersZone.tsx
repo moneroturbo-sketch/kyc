@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -385,14 +385,19 @@ export default function LoadersZone() {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                        {(ad.loaderUsername || "L")[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <p className="font-medium text-foreground" data-testid={`text-loader-${ad.id}`}>
-                            {ad.loaderUsername || "Loader"}
-                          </p>
+                      <button
+                        onClick={() => setLocation(`/profile?id=${ad.loaderId}`)}
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        data-testid={`profile-link-loader-${ad.loaderId}`}
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {(ad.loaderUsername || "L")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <p className="font-medium text-foreground" data-testid={`text-loader-${ad.id}`}>
+                              {ad.loaderUsername || "Loader"}
+                            </p>
                           {ad.loaderStats?.isVerifiedVendor && (
                             <BadgeCheck className="h-4 w-4 text-blue-500" data-testid={`verified-badge-${ad.id}`} />
                           )}
@@ -416,8 +421,9 @@ export default function LoadersZone() {
                             </>
                           )}
                         </div>
+                        </div>
+                      </button>
                       </div>
-                    </div>
                     <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600">
                       <Lock className="h-3 w-3" />
                       10% Locked
