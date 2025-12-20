@@ -399,12 +399,18 @@ export default function WalletPage() {
                       placeholder="0.00"
                       className="bg-gray-800 border-gray-700 text-white"
                       value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || !isNaN(parseFloat(val))) {
+                          setWithdrawAmount(val);
+                        }
+                      }}
                       data-testid="input-withdraw-amount"
+                      min="0"
                     />
                     <p className="text-xs text-gray-500">
                       Available: {parseFloat(wallet?.availableBalance || "0").toFixed(4)} USDT
-                      {controls && ` | Min: ${controls.minWithdrawalAmount} USDT`}
+                      {controls && ` | Min: 5 USDT`}
                     </p>
                   </div>
 
@@ -426,22 +432,15 @@ export default function WalletPage() {
                         <span className="text-white">{parseFloat(withdrawAmount).toFixed(4)} USDT</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Fee</span>
+                        <span className="text-gray-400">Gas Fee</span>
                         <span className="text-yellow-400">-{calculateFee().toFixed(4)} USDT</span>
                       </div>
                       <div className="border-t border-gray-700 pt-2 flex justify-between text-sm font-medium">
-                        <span className="text-gray-400">Total Deduction</span>
-                        <span className="text-white">{(parseFloat(withdrawAmount) + calculateFee()).toFixed(4)} USDT</span>
+                        <span className="text-gray-400">You will receive</span>
+                        <span className="text-green-400">{(parseFloat(withdrawAmount) - calculateFee()).toFixed(4)} USDT</span>
                       </div>
                     </div>
                   )}
-
-                  <Alert className="bg-blue-900/30 border-blue-700">
-                    <AlertTriangle className="h-4 w-4 text-blue-400" />
-                    <AlertDescription className="text-blue-300 text-xs">
-                      Minimum withdrawal: 5 USDT. Fixed gas fee: 0.5 USDT
-                    </AlertDescription>
-                  </Alert>
 
                   <Alert className="bg-red-900/30 border-red-700">
                     <AlertTriangle className="h-4 w-4 text-red-400" />

@@ -36,9 +36,15 @@ export async function validateWithdrawalRequest(
   }
 
   const amountNum = parseFloat(amount);
+  
+  // Prevent negative amounts
+  if (amountNum < 0) {
+    return { valid: false, error: "Withdrawal amount cannot be negative" };
+  }
+
   const minWithdrawal = parseFloat(controls.minWithdrawalAmount);
   if (amountNum < minWithdrawal) {
-    return { valid: false, error: `Minimum withdrawal is ${minWithdrawal} USDT. You will receive ${(amountNum - 0.5).toFixed(2)} USDT after 0.5 USDT gas fee.` };
+    return { valid: false, error: `Minimum withdrawal is ${minWithdrawal} USDT` };
   }
 
   const wallet = await storage.getWalletByUserId(userId);
@@ -194,6 +200,7 @@ export async function createWithdrawalRequest(
 
   const fee = calculateWithdrawalFee(amount, controls.withdrawalFeePercent, controls.withdrawalFeeFixed);
   const totalDeduction = parseFloat(amount) + fee;
+  const netAmount = (parseFloat(amount) - fee).toFixed(8); // What user actually receives
   const newBalance = (parseFloat(wallet.availableBalance) - totalDeduction).toFixed(8);
 
   await storage.updateWalletBalance(wallet.id, newBalance, wallet.escrowBalance);
@@ -202,7 +209,7 @@ export async function createWithdrawalRequest(
   const withdrawal = await storage.createWithdrawalRequest({
     userId,
     walletId: wallet.id,
-    amount,
+    amount: netAmount, // Store net amount (after fee)
     currency: "USDT",
     walletAddress: checksummedAddress,
     network: "BSC",
