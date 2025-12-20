@@ -235,45 +235,45 @@ export default function WalletPage() {
   return (
     <Layout>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold text-white">Wallet</h1>
+        <h1 className="text-3xl font-bold text-foreground">Wallet</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-to-br from-purple-900/50 to-purple-800/30 border-purple-700 md:col-span-2">
+          <Card className="bg-card border-border md:col-span-2">
             <CardContent className="p-6">
               {walletLoading ? (
-                <Skeleton className="h-24 bg-purple-800/50" />
+                <Skeleton className="h-24 bg-muted" />
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-300 text-sm mb-1">Available Balance</p>
-                    <p className="text-4xl font-bold text-white">
+                    <p className="text-muted-foreground text-sm mb-1">Available Balance</p>
+                    <p className="text-4xl font-bold text-foreground">
                       {parseFloat(wallet?.availableBalance || "0").toFixed(2)}
-                      <span className="text-xl ml-2 text-purple-300">USDT</span>
+                      <span className="text-xl ml-2 text-muted-foreground">USDT</span>
                     </p>
                   </div>
-                  <div className="p-4 bg-purple-600 rounded-2xl">
-                    <Wallet className="h-8 w-8 text-white" />
+                  <div className="p-4 bg-primary rounded-2xl">
+                    <Wallet className="h-8 w-8 text-primary-foreground" />
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-yellow-900/50 to-yellow-800/30 border-yellow-700">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               {walletLoading ? (
-                <Skeleton className="h-24 bg-yellow-800/50" />
+                <Skeleton className="h-24 bg-muted" />
               ) : (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-4 w-4 text-yellow-400" />
-                    <p className="text-yellow-300 text-sm">In Escrow</p>
+                    <Lock className="h-4 w-4 text-primary" />
+                    <p className="text-muted-foreground text-sm">In Escrow</p>
                   </div>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-3xl font-bold text-foreground">
                     {parseFloat(wallet?.escrowBalance || "0").toFixed(2)}
-                    <span className="text-lg ml-2 text-yellow-300">USDT</span>
+                    <span className="text-lg ml-2 text-muted-foreground">USDT</span>
                   </p>
-                  <p className="text-xs text-yellow-400 mt-2">Protected funds in active trades</p>
+                  <p className="text-xs text-primary mt-2">Protected funds in active trades</p>
                 </div>
               )}
             </CardContent>
@@ -292,16 +292,16 @@ export default function WalletPage() {
                 Deposit
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
+            <DialogContent className="bg-card border-border max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Deposit USDT</DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogTitle className="text-foreground">Deposit USDT</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
                   Send USDT on BNB Smart Chain
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 {addressLoading ? (
-                  <Skeleton className="h-48 bg-gray-800" />
+                  <Skeleton className="h-48 bg-muted" />
                 ) : depositAddress ? (
                   <>
                     <div className="flex justify-center">
@@ -315,16 +315,16 @@ export default function WalletPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <div className="p-3 bg-gray-800 rounded-lg">
-                        <p className="text-gray-400 text-xs">Network</p>
-                        <p className="text-white font-medium">BSC</p>
-                        <p className="text-gray-500 text-xs">BNB Smart Chain (BEP20)</p>
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-muted-foreground text-xs">Network</p>
+                        <p className="text-foreground font-medium">BSC</p>
+                        <p className="text-muted-foreground text-xs">BNB Smart Chain (BEP20)</p>
                       </div>
 
-                      <div className="p-3 bg-gray-800 rounded-lg">
-                        <p className="text-gray-400 text-xs mb-2">Deposit Address</p>
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-muted-foreground text-xs mb-2">Deposit Address</p>
                         <div className="flex items-center gap-2">
-                          <code className="text-green-400 text-xs break-all flex-1 font-mono">
+                          <code className="text-primary text-xs break-all flex-1 font-mono">
                             {depositAddress.address}
                           </code>
                           <Button
@@ -333,26 +333,26 @@ export default function WalletPage() {
                             onClick={() => copyToClipboard(depositAddress.address)}
                             data-testid="button-copy-address"
                           >
-                            {copied ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                            {copied ? <CheckCircle className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                           </Button>
                         </div>
                       </div>
 
-                      <Alert className="bg-blue-900/30 border-blue-700">
-                        <AlertTriangle className="h-4 w-4 text-blue-400" />
-                        <AlertDescription className="text-blue-300 text-xs">
+                      <Alert className="bg-muted border-border">
+                        <AlertTriangle className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-foreground text-xs">
                           Minimum deposit: 5 USDT. Deposits below this amount won't be credited to your account. {depositAddress.minConfirmations} confirmations required.
                         </AlertDescription>
                       </Alert>
 
-                      <Alert className="bg-red-900/30 border-red-700">
-                        <AlertTriangle className="h-4 w-4 text-red-400" />
-                        <AlertDescription className="text-red-300 text-xs">
+                      <Alert className="bg-destructive/10 border-destructive">
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <AlertDescription className="text-foreground text-xs">
                           SEND ONLY USDT (BEP20) ON BNB SMART CHAIN. Other tokens or networks will result in permanent loss.
                         </AlertDescription>
                       </Alert>
 
-                      <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-medium">
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
                         Save and Share Address
                       </Button>
                     </div>
@@ -377,27 +377,27 @@ export default function WalletPage() {
                 Withdraw
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
+            <DialogContent className="bg-card border-border max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Withdraw USDT</DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogTitle className="text-foreground">Withdraw USDT</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
                   Withdraw to any BNB Smart Chain address
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-3">
-                  <div className="p-3 bg-gray-800 rounded-lg">
-                    <p className="text-gray-400 text-xs">Network</p>
-                    <p className="text-white font-medium">BSC</p>
-                    <p className="text-gray-500 text-xs">BNB Smart Chain (BEP20)</p>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-muted-foreground text-xs">Network</p>
+                    <p className="text-foreground font-medium">BSC</p>
+                    <p className="text-muted-foreground text-xs">BNB Smart Chain (BEP20)</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-gray-300 text-xs">Amount (USDT)</Label>
+                    <Label className="text-foreground text-xs">Amount (USDT)</Label>
                     <Input
                       type="text"
                       placeholder="0.00"
-                      className="bg-gray-800 border-gray-700 text-white"
+                      className="bg-muted border-border text-foreground"
                       value={withdrawAmount}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -411,17 +411,17 @@ export default function WalletPage() {
                       }}
                       data-testid="input-withdraw-amount"
                     />
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Available: {parseFloat(wallet?.availableBalance || "0").toFixed(4)} USDT
                       {controls && ` | Min: 5 USDT`}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-gray-300 text-xs">Destination Address (BEP20)</Label>
+                    <Label className="text-foreground text-xs">Destination Address (BEP20)</Label>
                     <Input
                       placeholder="0x..."
-                      className="bg-gray-800 border-gray-700 text-white font-mono text-sm"
+                      className="bg-muted border-border text-foreground font-mono text-sm"
                       value={withdrawAddress}
                       onChange={(e) => setWithdrawAddress(e.target.value)}
                       data-testid="input-withdraw-address"
@@ -429,31 +429,31 @@ export default function WalletPage() {
                   </div>
 
                   {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-                    <div className="p-3 bg-gray-800 rounded-lg space-y-2">
+                    <div className="p-3 bg-muted rounded-lg space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Amount</span>
-                        <span className="text-white">{parseFloat(withdrawAmount).toFixed(4)} USDT</span>
+                        <span className="text-muted-foreground">Amount</span>
+                        <span className="text-foreground">{parseFloat(withdrawAmount).toFixed(4)} USDT</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Gas Fee</span>
-                        <span className="text-yellow-400">-{calculateFee().toFixed(4)} USDT</span>
+                        <span className="text-muted-foreground">Gas Fee</span>
+                        <span className="text-primary">-{calculateFee().toFixed(4)} USDT</span>
                       </div>
-                      <div className="border-t border-gray-700 pt-2 flex justify-between text-sm font-medium">
-                        <span className="text-gray-400">You will receive</span>
-                        <span className="text-green-400">{(parseFloat(withdrawAmount) - calculateFee()).toFixed(4)} USDT</span>
+                      <div className="border-t border-border pt-2 flex justify-between text-sm font-medium">
+                        <span className="text-muted-foreground">You will receive</span>
+                        <span className="text-primary">{(parseFloat(withdrawAmount) - calculateFee()).toFixed(4)} USDT</span>
                       </div>
                     </div>
                   )}
 
-                  <Alert className="bg-red-900/30 border-red-700">
-                    <AlertTriangle className="h-4 w-4 text-red-400" />
-                    <AlertDescription className="text-red-300 text-xs">
+                  <Alert className="bg-destructive/10 border-destructive">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <AlertDescription className="text-foreground text-xs">
                       SEND ONLY TO BNB SMART CHAIN ADDRESSES. Double-check the address before submitting.
                     </AlertDescription>
                   </Alert>
 
                   <Button
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-medium"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                     onClick={() => withdrawMutation.mutate({ amount: withdrawAmount, walletAddress: withdrawAddress })}
                     disabled={
                       !withdrawAmount || 
@@ -474,7 +474,7 @@ export default function WalletPage() {
                     )}
                   </Button>
 
-                  <p className="text-xs text-gray-500 text-center">
+                  <p className="text-xs text-muted-foreground text-center">
                     Withdrawals require approval before processing,expect a delay up to 24 hours.
                   </p>
                 </div>
@@ -484,9 +484,9 @@ export default function WalletPage() {
         </div>
 
         {withdrawals && withdrawals.length > 0 && (
-          <Card className="bg-gray-900/50 border-gray-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <ArrowUpRight className="h-5 w-5" />
                 Withdrawal Requests
               </CardTitle>
@@ -496,18 +496,18 @@ export default function WalletPage() {
                 {withdrawals.map((w) => (
                   <div
                     key={w.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-gray-800/50 border border-gray-700"
+                    className="flex items-center justify-between p-4 rounded-lg bg-muted border border-border"
                     data-testid={`withdrawal-${w.id}`}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-white font-medium">{parseFloat(w.amount).toFixed(4)} USDT</p>
+                        <p className="text-foreground font-medium">{parseFloat(w.amount).toFixed(4)} USDT</p>
                         {getStatusBadge(w.status)}
                       </div>
-                      <p className="text-xs text-gray-400 font-mono">
+                      <p className="text-xs text-muted-foreground font-mono">
                         To: {w.walletAddress?.slice(0, 10)}...{w.walletAddress?.slice(-8)}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {new Date(w.createdAt).toLocaleString()}
                       </p>
                     </div>
@@ -516,7 +516,7 @@ export default function WalletPage() {
                         href={`https://bscscan.com/tx/${w.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300"
+                        className="text-primary hover:text-primary/80"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </a>
@@ -528,9 +528,9 @@ export default function WalletPage() {
           </Card>
         )}
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Transaction History
             </CardTitle>
@@ -539,7 +539,7 @@ export default function WalletPage() {
             {txLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 bg-gray-800" />
+                  <Skeleton key={i} className="h-16 bg-muted" />
                 ))}
               </div>
             ) : transactions && transactions.length > 0 ? (
@@ -547,28 +547,28 @@ export default function WalletPage() {
                 {transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-gray-800/50 border border-gray-700"
+                    className="flex items-center justify-between p-4 rounded-lg bg-muted border border-border"
                     data-testid={`transaction-${tx.id}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gray-700">
+                      <div className="p-2 rounded-lg bg-muted-foreground/20">
                         {getTransactionIcon(tx.type)}
                       </div>
                       <div>
-                        <p className="text-white font-medium capitalize">
+                        <p className="text-foreground font-medium capitalize">
                           {tx.type.replace("_", " ")}
                         </p>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           {tx.description || new Date(tx.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-bold ${tx.isNegative ? "text-red-400" : getTransactionColor(tx.type)}`}>
+                      <p className={`font-bold ${tx.isNegative ? "text-destructive" : getTransactionColor(tx.type)}`}>
                         {tx.isNegative ? "-" : "+"}
                         {parseFloat(tx.amount).toFixed(4)} {tx.currency}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {new Date(tx.createdAt).toLocaleTimeString()}
                       </p>
                     </div>
@@ -577,9 +577,9 @@ export default function WalletPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Clock className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">No transactions yet</p>
-                <p className="text-gray-500 text-sm">Your transaction history will appear here</p>
+                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No transactions yet</p>
+                <p className="text-muted-foreground text-sm">Your transaction history will appear here</p>
               </div>
             )}
           </CardContent>
