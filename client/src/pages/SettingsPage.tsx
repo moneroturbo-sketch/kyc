@@ -191,21 +191,21 @@ export default function SettingsPage() {
   return (
     <Layout>
       <div className="space-y-6 max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-white">Settings</h1>
+        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <User className="h-5 w-5" />
               Account Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoading ? (
-              <Skeleton className="h-32 bg-gray-800" />
+              <Skeleton className="h-32" />
             ) : (
               <div className="grid gap-4">
-                <div className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                   <div className="relative">
                     <input
                       type="file"
@@ -223,43 +223,43 @@ export default function SettingsPage() {
                         <img
                           src={me.profilePicture}
                           alt={me.username}
-                          className="w-20 h-20 rounded-full object-cover border-2 border-purple-500"
+                          className="w-20 h-20 rounded-full object-cover border-2 border-primary"
                         />
                       ) : (
-                        <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-purple-400 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold">
                           {me?.username?.[0]?.toUpperCase()}
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Camera className="h-6 w-6 text-white" />
                       </div>
                       {uploadProfilePictureMutation.isPending && (
-                        <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                           <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
                         </div>
                       )}
                     </div>
                   </div>
                   <div className="flex-1">
-                    <p className="text-white font-medium text-lg">{me?.username}</p>
-                    <p className="text-gray-400 text-sm">Click the image to change your profile picture</p>
+                    <p className="text-foreground font-medium text-lg">{me?.username}</p>
+                    <p className="text-muted-foreground text-sm">Click the image to change your profile picture</p>
                     <Badge className="mt-2">{me?.role}</Badge>
                   </div>
                 </div>
-                <div className="p-4 bg-gray-800 rounded-lg">
-                  <p className="text-gray-400 text-sm">Email</p>
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-muted-foreground text-sm">Email</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-white font-medium">{me?.email}</p>
+                    <p className="text-foreground font-medium">{me?.email}</p>
                     {me?.emailVerified ? (
-                      <CheckCircle className="h-4 w-4 text-green-400" />
+                      <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-yellow-400" />
+                      <AlertCircle className="h-4 w-4 text-yellow-500" />
                     )}
                   </div>
                 </div>
-                <div className="p-4 bg-gray-800 rounded-lg">
-                  <p className="text-gray-400 text-sm">Member since</p>
-                  <p className="text-white font-medium">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-muted-foreground text-sm">Member since</p>
+                  <p className="text-foreground font-medium">
                     {new Date(me?.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -268,9 +268,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Shield className="h-5 w-5" />
               Security
             </CardTitle>
@@ -279,14 +279,14 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-900">
-                  <Smartphone className="h-5 w-5 text-purple-400" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Smartphone className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Two-Factor Authentication</p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-foreground font-medium">Two-Factor Authentication</p>
+                  <p className="text-muted-foreground text-sm">
                     Use an authenticator app for extra security
                   </p>
                 </div>
@@ -297,21 +297,21 @@ export default function SettingsPage() {
                 <Dialog open={setup2FAOpen} onOpenChange={setSetup2FAOpen}>
                   <DialogTrigger asChild>
                     <Button
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-primary hover:bg-primary/90"
                       onClick={() => setup2FAMutation.mutate()}
                       data-testid="button-setup-2fa"
                     >
                       Enable 2FA
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
-                      <DialogTitle className="text-white">Setup Two-Factor Authentication</DialogTitle>
+                      <DialogTitle className="text-foreground">Setup Two-Factor Authentication</DialogTitle>
                     </DialogHeader>
                     {setup2FAMutation.data ? (
                       <div className="space-y-6 pt-4">
                         <div className="text-center">
-                          <p className="text-gray-400 text-sm mb-4">
+                          <p className="text-muted-foreground text-sm mb-4">
                             Scan this QR code with your authenticator app
                           </p>
                           <div className="flex justify-center p-4 bg-white rounded-lg">
@@ -320,12 +320,12 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-gray-300">Or enter this code manually</Label>
+                          <Label className="text-foreground">Or enter this code manually</Label>
                           <div className="flex gap-2">
                             <Input
                               readOnly
                               value={setup2FAMutation.data.secret}
-                              className="bg-gray-800 border-gray-700 text-white font-mono text-sm"
+                              className="bg-muted border-border font-mono text-sm"
                             />
                             <Button
                               variant="outline"
@@ -339,11 +339,11 @@ export default function SettingsPage() {
                           </div>
                         </div>
 
-                        <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
-                          <p className="text-yellow-300 font-medium text-sm mb-2">Save your recovery codes</p>
+                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                          <p className="text-yellow-600 dark:text-yellow-400 font-medium text-sm mb-2">Save your recovery codes</p>
                           <div className="grid grid-cols-2 gap-2 mb-3">
                             {setup2FAMutation.data.recoveryCodes?.map((code: string, i: number) => (
-                              <code key={i} className="text-xs text-yellow-400 bg-gray-800 p-1 rounded">
+                              <code key={i} className="text-xs bg-muted p-1 rounded text-foreground">
                                 {code}
                               </code>
                             ))}
@@ -359,11 +359,11 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-gray-300">Enter verification code</Label>
+                          <Label className="text-foreground">Enter verification code</Label>
                           <Input
                             placeholder="000000"
                             maxLength={6}
-                            className="bg-gray-800 border-gray-700 text-white text-center text-lg tracking-widest"
+                            className="bg-muted border-border text-center text-lg tracking-widest"
                             value={verifyToken}
                             onChange={(e) => setVerifyToken(e.target.value)}
                             data-testid="input-2fa-verify"
@@ -381,8 +381,8 @@ export default function SettingsPage() {
                       </div>
                     ) : (
                       <div className="py-8 text-center">
-                        <div className="animate-spin h-8 w-8 border-2 border-purple-600 border-t-transparent rounded-full mx-auto" />
-                        <p className="text-gray-400 mt-4">Setting up 2FA...</p>
+                        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
+                        <p className="text-muted-foreground mt-4">Setting up 2FA...</p>
                       </div>
                     )}
                   </DialogContent>
@@ -393,9 +393,9 @@ export default function SettingsPage() {
         </Card>
 
         {user?.role !== "admin" && user?.role !== "dispute_admin" && (
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Key className="h-5 w-5" />
               KYC Verification
             </CardTitle>
@@ -404,34 +404,34 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="p-4 bg-muted rounded-lg">
               {kycStatus?.status === "approved" ? (
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 text-green-400" />
+                  <CheckCircle className="h-6 w-6 text-green-500" />
                   <div>
-                    <p className="text-white font-medium">KYC Verified</p>
-                    <p className="text-gray-400 text-sm">Tier: {kycStatus.tier}</p>
+                    <p className="text-foreground font-medium">KYC Verified</p>
+                    <p className="text-muted-foreground text-sm">Tier: {kycStatus.tier}</p>
                   </div>
                 </div>
               ) : kycStatus?.status === "pending" ? (
                 <div className="flex items-center gap-3">
-                  <div className="animate-spin h-6 w-6 border-2 border-yellow-400 border-t-transparent rounded-full" />
+                  <div className="animate-spin h-6 w-6 border-2 border-yellow-500 border-t-transparent rounded-full" />
                   <div>
-                    <p className="text-white font-medium">Verification Pending</p>
-                    <p className="text-gray-400 text-sm">Your documents are being reviewed</p>
+                    <p className="text-foreground font-medium">Verification Pending</p>
+                    <p className="text-muted-foreground text-sm">Your documents are being reviewed</p>
                   </div>
                 </div>
               ) : kycStatus?.status === "rejected" ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="h-6 w-6 text-red-400" />
+                    <AlertCircle className="h-6 w-6 text-destructive" />
                     <div>
-                      <p className="text-white font-medium">Verification Rejected</p>
-                      <p className="text-gray-400 text-sm">{kycStatus.rejectionReason || "Please resubmit"}</p>
+                      <p className="text-foreground font-medium">Verification Rejected</p>
+                      <p className="text-muted-foreground text-sm">{kycStatus.rejectionReason || "Please resubmit"}</p>
                     </div>
                   </div>
                   <Button 
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-primary hover:bg-primary/90"
                     onClick={() => setKycDialogOpen(true)}
                     data-testid="button-resubmit-kyc"
                   >
@@ -441,11 +441,11 @@ export default function SettingsPage() {
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">Not Verified</p>
-                    <p className="text-gray-400 text-sm">Complete KYC to increase your limits</p>
+                    <p className="text-foreground font-medium">Not Verified</p>
+                    <p className="text-muted-foreground text-sm">Complete KYC to increase your limits</p>
                   </div>
                   <Button 
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-primary hover:bg-primary/90"
                     onClick={() => setKycDialogOpen(true)}
                     data-testid="button-start-kyc"
                   >
@@ -455,16 +455,16 @@ export default function SettingsPage() {
               )}
 
               <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
-                    <DialogContent className="bg-gray-900 border-gray-800 max-w-md max-h-[90vh]">
+                    <DialogContent className="max-w-md max-h-[90vh]">
                       <DialogHeader>
-                        <DialogTitle className="text-white">KYC Verification</DialogTitle>
+                        <DialogTitle className="text-foreground">KYC Verification</DialogTitle>
                       </DialogHeader>
                       <ScrollArea className="max-h-[70vh] pr-4">
                       <div className="space-y-4 pt-4">
                         <div className="space-y-2">
-                          <Label className="text-gray-300">ID Type</Label>
+                          <Label className="text-foreground">ID Type</Label>
                           <Select value={idType} onValueChange={setIdType}>
-                            <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="select-id-type">
+                            <SelectTrigger className="bg-muted border-border" data-testid="select-id-type">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -476,18 +476,18 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-gray-300">ID Number</Label>
+                          <Label className="text-foreground">ID Number</Label>
                           <Input
                             placeholder="Enter your ID number"
                             value={idNumber}
                             onChange={(e) => setIdNumber(e.target.value)}
-                            className="bg-gray-800 border-gray-700 text-white"
+                            className="bg-muted border-border"
                             data-testid="input-id-number"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-gray-300">ID Document (front)</Label>
+                          <Label className="text-foreground">ID Document (front)</Label>
                           <input
                             type="file"
                             ref={idDocumentRef}
@@ -497,16 +497,16 @@ export default function SettingsPage() {
                           />
                           <div
                             onClick={() => idDocumentRef.current?.click()}
-                            className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 transition-colors"
+                            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
                             data-testid="upload-id-document"
                           >
                             {idDocument ? (
-                              <div className="flex items-center justify-center gap-2 text-green-400">
+                              <div className="flex items-center justify-center gap-2 text-green-500">
                                 <FileText className="h-5 w-5" />
                                 <span>{idDocument.name}</span>
                               </div>
                             ) : (
-                              <div className="text-gray-400">
+                              <div className="text-muted-foreground">
                                 <Upload className="h-8 w-8 mx-auto mb-2" />
                                 <p>Click to upload ID document</p>
                                 <p className="text-xs">JPG, PNG or PDF (max 5MB)</p>
@@ -516,7 +516,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-gray-300">Selfie with ID</Label>
+                          <Label className="text-foreground">Selfie with ID</Label>
                           <input
                             type="file"
                             ref={selfieRef}
@@ -526,16 +526,16 @@ export default function SettingsPage() {
                           />
                           <div
                             onClick={() => selfieRef.current?.click()}
-                            className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 transition-colors"
+                            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
                             data-testid="upload-selfie"
                           >
                             {selfie ? (
-                              <div className="flex items-center justify-center gap-2 text-green-400">
+                              <div className="flex items-center justify-center gap-2 text-green-500">
                                 <Camera className="h-5 w-5" />
                                 <span>{selfie.name}</span>
                               </div>
                             ) : (
-                              <div className="text-gray-400">
+                              <div className="text-muted-foreground">
                                 <Camera className="h-8 w-8 mx-auto mb-2" />
                                 <p>Click to upload selfie holding your ID</p>
                                 <p className="text-xs">JPG or PNG (max 5MB)</p>
@@ -545,7 +545,7 @@ export default function SettingsPage() {
                         </div>
 
                         <Button
-                          className="w-full bg-purple-600 hover:bg-purple-700"
+                          className="w-full bg-primary hover:bg-primary/90"
                           disabled={!idDocument || !selfie || !idNumber || submitKycMutation.isPending}
                           onClick={() => submitKycMutation.mutate()}
                           data-testid="button-submit-kyc"
