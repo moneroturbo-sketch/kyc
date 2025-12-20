@@ -107,10 +107,17 @@ async function updatePendingDeposits(): Promise<void> {
       
       if (confirmations > 0) {
         const newStatus = isConfirmed ? "confirmed" : "confirming";
-        await storage.updateBlockchainDeposit(deposit.id, {
+        const updateData: any = {
           confirmations,
           status: newStatus,
-        });
+        };
+        
+        // Set confirmedAt when deposit first reaches confirmed status
+        if (isConfirmed && deposit.status !== "confirmed") {
+          updateData.confirmedAt = new Date();
+        }
+        
+        await storage.updateBlockchainDeposit(deposit.id, updateData);
         
         console.log(`[DepositScanner] Deposit ${deposit.id}: ${confirmations}/${deposit.requiredConfirmations} confirmations (${newStatus})`);
       }
@@ -124,9 +131,26 @@ async function creditConfirmedDeposits(): Promise<void> {
   const confirmedDeposits = await storage.getConfirmedUncreditedDeposits();
   const controls = await storage.getPlatformWalletControls();
   const minDepositAmount = controls ? parseFloat(controls.minDepositAmount) : 5;
+  const CREDIT_DELAY_MS = 5 * 60 * 1000; // 5 minutes
   
   for (const deposit of confirmedDeposits) {
     try {
+      // Check if 5 minutes have passed since confirmation
+      if (!deposit.confirmedAt) {
+        console.log(`[DepositScanner] Deposit ${deposit.id} not yet confirmed, skipping`);
+        continue;
+      }
+
+      const now = new Date();
+      const confirmedTime = new Date(deposit.confirmedAt);
+      const timeSinceConfirmation = now.getTime() - confirmedTime.getTime();
+
+      if (timeSinceConfirmation < CREDIT_DELAY_MS) {
+        const remainingTime = Math.ceil((CREDIT_DELAY_MS - timeSinceConfirmation) / 1000 / 60);
+        console.log(`[DepositScanner] Deposit ${deposit.id}: Waiting ${remainingTime} more minutes before crediting (5 min delay)`);
+        continue;
+      }
+
       const wallet = await storage.getWalletByUserId(deposit.userId);
       if (!wallet) {
         console.error(`[DepositScanner] No wallet found for user ${deposit.userId}`);

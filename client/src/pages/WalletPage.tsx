@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { fetchWithAuth } from "@/lib/auth";
+import QRCode from "qrcode";
 import {
   Wallet,
   ArrowUpRight,
@@ -77,6 +78,7 @@ export default function WalletPage() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [copied, setCopied] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 
   const { data: wallet, isLoading: walletLoading } = useQuery<WalletData>({
     queryKey: ["wallet"],
@@ -162,6 +164,14 @@ export default function WalletPage() {
     setTimeout(() => setCopied(false), 2000);
     toast({ title: "Copied!", description: "Address copied to clipboard" });
   };
+
+  useEffect(() => {
+    if (depositAddress?.address && depositOpen) {
+      QRCode.toDataURL(depositAddress.address, { width: 200, margin: 2 })
+        .then(setQrCodeUrl)
+        .catch((err) => console.error("QR Code generation failed:", err));
+    }
+  }, [depositAddress?.address, depositOpen]);
 
   const calculateFee = () => {
     if (!controls || !withdrawAmount) return 0;
@@ -296,10 +306,11 @@ export default function WalletPage() {
                   <>
                     <div className="flex justify-center">
                       <div className="p-4 bg-white rounded-lg">
-                        <svg width="200" height="200" viewBox="0 0 200 200" className="w-48 h-48">
-                          <rect width="200" height="200" fill="white" />
-                          <rect x="10" y="10" width="180" height="180" fill="white" stroke="#ccc" strokeWidth="1" />
-                        </svg>
+                        {qrCodeUrl ? (
+                          <img src={qrCodeUrl} alt="Deposit Address QR Code" className="w-48 h-48" />
+                        ) : (
+                          <Skeleton className="w-48 h-48" />
+                        )}
                       </div>
                     </div>
 
@@ -308,12 +319,6 @@ export default function WalletPage() {
                         <p className="text-gray-400 text-xs">Network</p>
                         <p className="text-white font-medium">BSC</p>
                         <p className="text-gray-500 text-xs">BNB Smart Chain (BEP20)</p>
-                      </div>
-
-                      <div className="p-3 bg-gray-800 rounded-lg">
-                        <p className="text-gray-400 text-xs">Contract Information</p>
-                        <p className="text-white font-medium text-xs">**97955</p>
-                        <p className="text-gray-500 text-xs">USDT Contract</p>
                       </div>
 
                       <div className="p-3 bg-gray-800 rounded-lg">
@@ -374,75 +379,97 @@ export default function WalletPage() {
             </DialogTrigger>
             <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Withdraw USDT (BEP20)</DialogTitle>
+                <DialogTitle className="text-white">Withdraw USDT</DialogTitle>
                 <DialogDescription className="text-gray-400">
                   Withdraw to any BNB Smart Chain address
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Amount (USDT)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    className="bg-gray-800 border-gray-700 text-white"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    data-testid="input-withdraw-amount"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Available: {parseFloat(wallet?.availableBalance || "0").toFixed(4)} USDT
-                    {controls && ` | Min: ${controls.minWithdrawalAmount} USDT`}
+                <div className="space-y-3">
+                  <div className="p-3 bg-gray-800 rounded-lg">
+                    <p className="text-gray-400 text-xs">Network</p>
+                    <p className="text-white font-medium">BSC</p>
+                    <p className="text-gray-500 text-xs">BNB Smart Chain (BEP20)</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-300 text-xs">Amount (USDT)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      className="bg-gray-800 border-gray-700 text-white"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      data-testid="input-withdraw-amount"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Available: {parseFloat(wallet?.availableBalance || "0").toFixed(4)} USDT
+                      {controls && ` | Min: ${controls.minWithdrawalAmount} USDT`}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-300 text-xs">Destination Address (BEP20)</Label>
+                    <Input
+                      placeholder="0x..."
+                      className="bg-gray-800 border-gray-700 text-white font-mono text-sm"
+                      value={withdrawAddress}
+                      onChange={(e) => setWithdrawAddress(e.target.value)}
+                      data-testid="input-withdraw-address"
+                    />
+                  </div>
+
+                  {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                    <div className="p-3 bg-gray-800 rounded-lg space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Amount</span>
+                        <span className="text-white">{parseFloat(withdrawAmount).toFixed(4)} USDT</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Fee</span>
+                        <span className="text-yellow-400">-{calculateFee().toFixed(4)} USDT</span>
+                      </div>
+                      <div className="border-t border-gray-700 pt-2 flex justify-between text-sm font-medium">
+                        <span className="text-gray-400">Total Deduction</span>
+                        <span className="text-white">{(parseFloat(withdrawAmount) + calculateFee()).toFixed(4)} USDT</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Alert className="bg-blue-900/30 border-blue-700">
+                    <AlertTriangle className="h-4 w-4 text-blue-400" />
+                    <AlertDescription className="text-blue-300 text-xs">
+                      Minimum withdrawal: 5 USDT. Fixed gas fee: 0.5 USDT
+                    </AlertDescription>
+                  </Alert>
+
+                  <Alert className="bg-red-900/30 border-red-700">
+                    <AlertTriangle className="h-4 w-4 text-red-400" />
+                    <AlertDescription className="text-red-300 text-xs">
+                      SEND ONLY TO BNB SMART CHAIN ADDRESSES. Double-check the address before submitting.
+                    </AlertDescription>
+                  </Alert>
+
+                  <Button
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-medium"
+                    onClick={() => withdrawMutation.mutate({ amount: withdrawAmount, walletAddress: withdrawAddress })}
+                    disabled={!withdrawAmount || !withdrawAddress || withdrawMutation.isPending || parseFloat(withdrawAmount) < 5}
+                    data-testid="button-confirm-withdraw"
+                  >
+                    {withdrawMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Submit Withdrawal"
+                    )}
+                  </Button>
+
+                  <p className="text-xs text-gray-500 text-center">
+                    Withdrawals require admin approval before processing
                   </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Destination Address (BEP20)</Label>
-                  <Input
-                    placeholder="0x..."
-                    className="bg-gray-800 border-gray-700 text-white font-mono text-sm"
-                    value={withdrawAddress}
-                    onChange={(e) => setWithdrawAddress(e.target.value)}
-                    data-testid="input-withdraw-address"
-                  />
-                </div>
-
-                {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-                  <div className="p-3 bg-gray-800 rounded-lg border border-gray-700 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Amount</span>
-                      <span className="text-white">{parseFloat(withdrawAmount).toFixed(4)} USDT</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Fee</span>
-                      <span className="text-yellow-400">-{calculateFee().toFixed(4)} USDT</span>
-                    </div>
-                    <div className="border-t border-gray-700 pt-2 flex justify-between text-sm font-medium">
-                      <span className="text-gray-400">Total Deduction</span>
-                      <span className="text-white">{(parseFloat(withdrawAmount) + calculateFee()).toFixed(4)} USDT</span>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  onClick={() => withdrawMutation.mutate({ amount: withdrawAmount, walletAddress: withdrawAddress })}
-                  disabled={!withdrawAmount || !withdrawAddress || withdrawMutation.isPending || parseFloat(withdrawAmount) < 5}
-                  data-testid="button-confirm-withdraw"
-                >
-                  {withdrawMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Submit Withdrawal"
-                  )}
-                </Button>
-
-                <p className="text-xs text-gray-500 text-center">
-                  Withdrawals require admin approval before processing
-                </p>
               </div>
             </DialogContent>
           </Dialog>

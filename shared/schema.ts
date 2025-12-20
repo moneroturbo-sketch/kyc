@@ -1147,6 +1147,7 @@ export const blockchainDeposits = pgTable("blockchain_deposits", {
   confirmations: integer("confirmations").notNull().default(0),
   requiredConfirmations: integer("required_confirmations").notNull().default(15),
   status: depositStatusEnum("status").notNull().default("pending"),
+  confirmedAt: timestamp("confirmed_at"),
   creditedAt: timestamp("credited_at"),
   creditedTransactionId: varchar("credited_transaction_id"),
   detectedAt: timestamp("detected_at").notNull().default(sql`now()`),
