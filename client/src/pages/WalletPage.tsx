@@ -455,7 +455,13 @@ export default function WalletPage() {
                   <Button
                     className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-medium"
                     onClick={() => withdrawMutation.mutate({ amount: withdrawAmount, walletAddress: withdrawAddress })}
-                    disabled={!withdrawAmount || !withdrawAddress || withdrawMutation.isPending || parseFloat(withdrawAmount) < 5}
+                    disabled={
+                      !withdrawAmount || 
+                      !withdrawAddress || 
+                      withdrawMutation.isPending || 
+                      parseFloat(withdrawAmount) < 5 ||
+                      (parseFloat(withdrawAmount) + calculateFee() > parseFloat(wallet?.availableBalance || "0"))
+                    }
                     data-testid="button-confirm-withdraw"
                   >
                     {withdrawMutation.isPending ? (
