@@ -87,17 +87,35 @@ export default function TradePage() {
   });
 
   const handleAmountChange = (value: string) => {
-    const intValue = Math.floor(parseFloat(value) || 0);
-    setAmount(intValue > 0 ? String(intValue) : "");
-    if (offer && intValue > 0) {
-      const fiat = intValue * parseFloat(offer.pricePerUnit);
-      setFiatAmount(String(Math.floor(fiat)));
+    // Only allow positive decimal numbers (e.g., 7, 8.0, 8.4)
+    if (value === "") {
+      setAmount("");
+      setFiatAmount("");
+      return;
+    }
+    if (!/^\d+(\.\d{0,8})?$/.test(value)) {
+      return; // Reject invalid input silently
+    }
+    const numValue = parseFloat(value);
+    setAmount(numValue > 0 ? value : "");
+    if (offer && numValue > 0) {
+      const fiat = numValue * parseFloat(offer.pricePerUnit);
+      setFiatAmount(String(fiat.toFixed(2)));
     } else {
       setFiatAmount("");
     }
   };
 
   const handleFiatChange = (value: string) => {
+    // Only allow positive decimal numbers
+    if (value === "") {
+      setFiatAmount("");
+      setAmount("");
+      return;
+    }
+    if (!/^\d+(\.\d{0,8})?$/.test(value)) {
+      return; // Reject invalid input silently
+    }
     setFiatAmount(value);
   };
 

@@ -87,10 +87,19 @@ export default function VendorPage() {
   };
 
   const handlePriceChange = (value: string) => {
+    // Only allow positive decimal numbers
+    if (value === "") {
+      setNewOffer({ ...newOffer, pricePerUnit: "", maxLimit: "" });
+      return;
+    }
+    if (!/^\d+(\.\d{0,8})?$/.test(value)) {
+      return; // Reject invalid input silently
+    }
     const numValue = parseFloat(value);
-    if (numValue < 0) return;
-    const maxLimit = calculateMaxAmount(value, newOffer.availableAmount);
-    setNewOffer({ ...newOffer, pricePerUnit: value, maxLimit });
+    if (numValue > 0) {
+      const maxLimit = calculateMaxAmount(value, newOffer.availableAmount);
+      setNewOffer({ ...newOffer, pricePerUnit: value, maxLimit });
+    }
   };
 
   const handleAvailableChange = (value: string) => {
@@ -101,9 +110,19 @@ export default function VendorPage() {
   };
 
   const handleMinLimitChange = (value: string) => {
+    // Only allow positive decimal numbers (e.g., 0.5, 1, 10.25)
+    if (value === "") {
+      setNewOffer({ ...newOffer, minLimit: "" });
+      return;
+    }
+    if (!/^\d+(\.\d{0,8})?$/.test(value)) {
+      return; // Reject invalid input silently
+    }
     const numValue = parseFloat(value);
-    if (numValue < 0) return;
-    setNewOffer({ ...newOffer, minLimit: value });
+    // Minimum KYC marketplace price is 0.5 USDT
+    if (numValue >= 0.5) {
+      setNewOffer({ ...newOffer, minLimit: value });
+    }
   };
 
   if (!isAuthenticated()) {
