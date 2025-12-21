@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ interface WithdrawalRequest {
 }
 
 export default function WalletPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [depositOpen, setDepositOpen] = useState(false);
@@ -245,7 +247,7 @@ export default function WalletPage() {
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-sm mb-1">Available Balance</p>
+                    <p className="text-muted-foreground text-sm mb-1">{t('wallet.availableBalance')}</p>
                     <p className="text-4xl font-bold text-foreground">
                       {parseFloat(wallet?.availableBalance || "0").toFixed(2)}
                       <span className="text-xl ml-2 text-muted-foreground">USDT</span>
@@ -267,13 +269,13 @@ export default function WalletPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Lock className="h-4 w-4 text-primary" />
-                    <p className="text-muted-foreground text-sm">In Escrow</p>
+                    <p className="text-muted-foreground text-sm">{t('wallet.inEscrow')}</p>
                   </div>
                   <p className="text-3xl font-bold text-foreground">
                     {parseFloat(wallet?.escrowBalance || "0").toFixed(2)}
                     <span className="text-lg ml-2 text-muted-foreground">USDT</span>
                   </p>
-                  <p className="text-xs text-primary mt-2">Protected funds in active trades</p>
+                  <p className="text-xs text-primary mt-2">{t('wallet.protectedFunds')}</p>
                 </div>
               )}
             </CardContent>
@@ -289,14 +291,14 @@ export default function WalletPage() {
                 disabled={!controls?.depositsEnabled}
               >
                 <ArrowDownLeft className="h-4 w-4" />
-                Deposit
+                {t('wallet.deposit')}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-card border-border max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-foreground">Deposit USDT</DialogTitle>
+                <DialogTitle className="text-foreground">{t('wallet.depositUSDT')}</DialogTitle>
                 <DialogDescription className="text-muted-foreground">
-                  Send USDT on BNB Smart Chain
+                  {t('wallet.sendUSDTBNB')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-4">
@@ -316,13 +318,13 @@ export default function WalletPage() {
 
                     <div className="space-y-3">
                       <div className="p-3 bg-muted rounded-lg">
-                        <p className="text-muted-foreground text-xs">Network</p>
-                        <p className="text-foreground font-medium">BSC</p>
-                        <p className="text-muted-foreground text-xs">BNB Smart Chain (BEP20)</p>
+                        <p className="text-muted-foreground text-xs">{t('wallet.network')}</p>
+                        <p className="text-foreground font-medium">{t('wallet.bsc')}</p>
+                        <p className="text-muted-foreground text-xs">{t('wallet.bnbSmartChain')}</p>
                       </div>
 
                       <div className="p-3 bg-muted rounded-lg">
-                        <p className="text-muted-foreground text-xs mb-2">Deposit Address</p>
+                        <p className="text-muted-foreground text-xs mb-2">{t('wallet.depositAddress')}</p>
                         <div className="flex items-center gap-2">
                           <code className="text-primary text-xs break-all flex-1 font-mono">
                             {depositAddress.address}

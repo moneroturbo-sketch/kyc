@@ -310,14 +310,14 @@ export default function SettingsPage() {
                   <Smartphone className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-foreground font-medium">Two-Factor Authentication</p>
+                  <p className="text-foreground font-medium">{t('twoFactor.title')}</p>
                   <p className="text-muted-foreground text-sm">
-                    Use an authenticator app for extra security
+                    {t('twoFactor.description')}
                   </p>
                 </div>
               </div>
               {me?.twoFactorEnabled ? (
-                <Badge className="bg-green-600">Enabled</Badge>
+                <Badge className="bg-green-600">{t('twoFactor.enabled')}</Badge>
               ) : (
                 <Dialog open={setup2FAOpen} onOpenChange={setSetup2FAOpen}>
                   <DialogTrigger asChild>
@@ -326,18 +326,18 @@ export default function SettingsPage() {
                       onClick={() => setup2FAMutation.mutate()}
                       data-testid="button-setup-2fa"
                     >
-                      Enable 2FA
+                      {t('twoFactor.enable')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader>
-                      <DialogTitle className="text-foreground">Setup Two-Factor Authentication</DialogTitle>
+                      <DialogTitle className="text-foreground">{t('twoFactor.setup')}</DialogTitle>
                     </DialogHeader>
                     {setup2FAMutation.data ? (
                       <div className="space-y-6 pt-4">
                         <div className="text-center">
                           <p className="text-muted-foreground text-sm mb-4">
-                            Scan this QR code with your authenticator app
+                            {t('twoFactor.scanQR')}
                           </p>
                           <div className="flex justify-center p-4 bg-white rounded-lg">
                             <img src={setup2FAMutation.data.qrCode} alt="QR Code" className="w-48 h-48" />
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-foreground">Or enter this code manually</Label>
+                          <Label className="text-foreground">{t('twoFactor.enterManually')}</Label>
                           <div className="flex gap-2">
                             <Input
                               readOnly
@@ -365,7 +365,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                          <p className="text-yellow-600 dark:text-yellow-400 font-medium text-sm mb-2">Save your recovery codes</p>
+                          <p className="text-yellow-600 dark:text-yellow-400 font-medium text-sm mb-2">{t('twoFactor.recoveryCodesSaved')}</p>
                           <div className="grid grid-cols-2 gap-2 mb-3">
                             {setup2FAMutation.data.recoveryCodes?.map((code: string, i: number) => (
                               <code key={i} className="text-xs bg-muted p-1 rounded text-foreground">
@@ -379,12 +379,12 @@ export default function SettingsPage() {
                             onClick={() => copyRecoveryCodes(setup2FAMutation.data.recoveryCodes)}
                           >
                             <Copy className="h-3 w-3 mr-2" />
-                            Copy All
+                            {t('twoFactor.copyAll')}
                           </Button>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-foreground">Enter verification code</Label>
+                          <Label className="text-foreground">{t('twoFactor.verificationCode')}</Label>
                           <Input
                             placeholder="000000"
                             maxLength={6}
@@ -401,13 +401,13 @@ export default function SettingsPage() {
                           onClick={() => enable2FAMutation.mutate(verifyToken)}
                           data-testid="button-verify-2fa"
                         >
-                          {enable2FAMutation.isPending ? "Verifying..." : "Verify & Enable"}
+                          {enable2FAMutation.isPending ? t('twoFactor.verifying') : t('twoFactor.verify')}
                         </Button>
                       </div>
                     ) : (
                       <div className="py-8 text-center">
                         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
-                        <p className="text-muted-foreground mt-4">Setting up 2FA...</p>
+                        <p className="text-muted-foreground mt-4">{t('twoFactor.setuping')}</p>
                       </div>
                     )}
                   </DialogContent>
@@ -422,10 +422,10 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
               <Key className="h-5 w-5" />
-              KYC Verification
+              {t('kyc.title')}
             </CardTitle>
             <CardDescription>
-              Verify your identity to unlock higher trading limits
+              {t('kyc.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -434,16 +434,16 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-6 w-6 text-green-500" />
                   <div>
-                    <p className="text-foreground font-medium">KYC Verified</p>
-                    <p className="text-muted-foreground text-sm">Tier: {kycStatus.tier}</p>
+                    <p className="text-foreground font-medium">{t('kyc.verified')}</p>
+                    <p className="text-muted-foreground text-sm">{t('kyc.tier')}: {kycStatus.tier}</p>
                   </div>
                 </div>
               ) : kycStatus?.status === "pending" ? (
                 <div className="flex items-center gap-3">
                   <div className="animate-spin h-6 w-6 border-2 border-yellow-500 border-t-transparent rounded-full" />
                   <div>
-                    <p className="text-foreground font-medium">Verification Pending</p>
-                    <p className="text-muted-foreground text-sm">Your documents are being reviewed</p>
+                    <p className="text-foreground font-medium">{t('kyc.pending')}</p>
+                    <p className="text-muted-foreground text-sm">{t('kyc.pendingDesc')}</p>
                   </div>
                 </div>
               ) : kycStatus?.status === "rejected" ? (
@@ -451,8 +451,8 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-3">
                     <AlertCircle className="h-6 w-6 text-destructive" />
                     <div>
-                      <p className="text-foreground font-medium">Verification Rejected</p>
-                      <p className="text-muted-foreground text-sm">{kycStatus.rejectionReason || "Please resubmit"}</p>
+                      <p className="text-foreground font-medium">{t('kyc.rejected')}</p>
+                      <p className="text-muted-foreground text-sm">{kycStatus.rejectionReason || t('common.cancel')}</p>
                     </div>
                   </div>
                   <Button 
@@ -460,21 +460,21 @@ export default function SettingsPage() {
                     onClick={() => setKycDialogOpen(true)}
                     data-testid="button-resubmit-kyc"
                   >
-                    Resubmit
+                    {t('kyc.resubmit')}
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-foreground font-medium">Not Verified</p>
-                    <p className="text-muted-foreground text-sm">Complete KYC to increase your limits</p>
+                    <p className="text-foreground font-medium">{t('kyc.notVerified')}</p>
+                    <p className="text-muted-foreground text-sm">{t('kyc.completeKyc')}</p>
                   </div>
                   <Button 
                     className="bg-primary hover:bg-primary/90"
                     onClick={() => setKycDialogOpen(true)}
                     data-testid="button-start-kyc"
                   >
-                    Start Verification
+                    {t('kyc.startVerification')}
                   </Button>
                 </div>
               )}
@@ -482,28 +482,28 @@ export default function SettingsPage() {
               <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
                     <DialogContent className="max-w-md max-h-[90vh]">
                       <DialogHeader>
-                        <DialogTitle className="text-foreground">KYC Verification</DialogTitle>
+                        <DialogTitle className="text-foreground">{t('kyc.kycVerification')}</DialogTitle>
                       </DialogHeader>
                       <ScrollArea className="max-h-[70vh] pr-4">
                       <div className="space-y-4 pt-4">
                         <div className="space-y-2">
-                          <Label className="text-foreground">ID Type</Label>
+                          <Label className="text-foreground">{t('kyc.idType')}</Label>
                           <Select value={idType} onValueChange={setIdType}>
                             <SelectTrigger className="bg-muted border-border" data-testid="select-id-type">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="passport">Passport</SelectItem>
-                              <SelectItem value="national_id">National ID</SelectItem>
-                              <SelectItem value="drivers_license">Driver's License</SelectItem>
+                              <SelectItem value="passport">{t('kyc.passport')}</SelectItem>
+                              <SelectItem value="national_id">{t('kyc.nationalId')}</SelectItem>
+                              <SelectItem value="drivers_license">{t('kyc.driversLicense')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-foreground">ID Number</Label>
+                          <Label className="text-foreground">{t('kyc.idNumber')}</Label>
                           <Input
-                            placeholder="Enter your ID number"
+                            placeholder={t('kyc.enterIdNumber')}
                             value={idNumber}
                             onChange={(e) => setIdNumber(e.target.value)}
                             className="bg-muted border-border"
@@ -512,7 +512,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-foreground">ID Document (front)</Label>
+                          <Label className="text-foreground">{t('kyc.idDocument')}</Label>
                           <input
                             type="file"
                             ref={idDocumentRef}

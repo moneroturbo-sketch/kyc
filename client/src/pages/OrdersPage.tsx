@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,7 @@ interface OrdersData {
 }
 
 export default function OrdersPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery<OrdersData>({
     queryKey: ["orders"],
     queryFn: async () => {
@@ -267,13 +269,13 @@ export default function OrdersPage() {
   return (
     <Layout>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold text-foreground">My Orders</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t('orders.myOrders')}</h1>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
-              Order History
+              {t('orders.orderHistory')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -287,23 +289,23 @@ export default function OrdersPage() {
               <Tabs defaultValue="buying">
                 <TabsList className="mb-6 flex-wrap">
                   <TabsTrigger value="buying" data-testid="tab-buying">
-                    Buying ({data?.buyerOrders?.length || 0})
+                    {t('orders.buying')} ({data?.buyerOrders?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger value="selling" data-testid="tab-selling">
-                    Selling ({data?.vendorOrders?.length || 0})
+                    {t('orders.selling')} ({data?.vendorOrders?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger value="loaders" data-testid="tab-loaders">
                     <Shield className="h-4 w-4 mr-1" />
-                    Loaders Zone ({data?.loaderOrders?.length || 0})
+                    {t('orders.loaders')} ({data?.loaderOrders?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger value="pending" data-testid="tab-pending">
-                    Pending ({data?.pendingOrders?.length || 0})
+                    {t('orders.pending')} ({data?.pendingOrders?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger value="cancelled" data-testid="tab-cancelled">
-                    Cancelled ({data?.cancelledOrders?.length || 0})
+                    {t('orders.cancelled')} ({data?.cancelledOrders?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger value="disputed" data-testid="tab-disputed">
-                    Disputed ({data?.disputedOrders?.length || 0})
+                    {t('orders.disputedOrders')} ({data?.disputedOrders?.length || 0})
                   </TabsTrigger>
                 </TabsList>
 

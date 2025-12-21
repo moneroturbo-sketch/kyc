@@ -428,7 +428,7 @@ export default function HomePage() {
       <Dialog open={showAdsModal} onOpenChange={setShowAdsModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Choose Ad Type</DialogTitle>
+            <DialogTitle>{t('vendor.chooseAdType')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <button
@@ -443,8 +443,8 @@ export default function HomePage() {
                 <Store className="h-6 w-6 text-primary" />
               </div>
               <div className="text-left">
-                <h3 className="font-medium text-foreground">KYC Marketplace Ad</h3>
-                <p className="text-sm text-muted-foreground">Post an ad to buy or sell KYC verified accounts</p>
+                <h3 className="font-medium text-foreground">{t('vendor.kycMarketplaceAd')}</h3>
+                <p className="text-sm text-muted-foreground">{t('vendor.postAdBuyOrSell')}</p>
               </div>
             </button>
             <button
@@ -459,8 +459,8 @@ export default function HomePage() {
                 <Shield className="h-6 w-6 text-amber-500" />
               </div>
               <div className="text-left">
-                <h3 className="font-medium text-foreground">Loaders Zone Ad</h3>
-                <p className="text-sm text-muted-foreground">Post an ad to offer or find loading services</p>
+                <h3 className="font-medium text-foreground">{t('vendor.loadersZoneAd')}</h3>
+                <p className="text-sm text-muted-foreground">{t('vendor.postAdLoadingServices')}</p>
               </div>
             </button>
           </div>
