@@ -115,5 +115,26 @@
   "chat": {
     "sendMessage": "Type a message...",
     "noMessages": "No messages yet. Start the conversation!"
+  },
+  "support": {
+    "title": "Customer Support",
+    "createTicket": "Create Support Ticket",
+    "myTickets": "My Tickets",
+    "allTickets": "All Tickets",
+    "subject": "Subject",
+    "message": "Message",
+    "status": "Status",
+    "open": "Open",
+    "closed": "Closed",
+    "inProgress": "In Progress",
+    "resolved": "Resolved",
+    "reply": "Reply to Support",
+    "noTickets": "No support tickets"
+  },
+  "admin": {
+    "autoWithdrawal": "Automatic Withdrawals",
+    "autoWithdrawalDesc": "Enable instant withdrawals without admin approval",
+    "kycVerification": "KYC Verification Required",
+    "kycVerificationDesc": "Require KYC verification to post ads"
   }
 }

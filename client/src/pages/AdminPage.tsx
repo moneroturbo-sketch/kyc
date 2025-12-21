@@ -1509,6 +1509,8 @@ export default function AdminPage() {
                           { key: "depositsEnabled", label: "Deposits Enabled", desc: "Allow deposits to wallets" },
                           { key: "withdrawalsEnabled", label: "Withdrawals Enabled", desc: "Allow withdrawals from wallets" },
                           { key: "tradingEnabled", label: "Trading Enabled", desc: "Allow creating new orders" },
+                          { key: "autoWithdrawalEnabled", label: "Automatic Withdrawals", desc: "Enable instant withdrawals without admin approval" },
+                          { key: "kycRequired", label: "KYC Requirement", desc: "Require KYC verification to post ads" },
                         ].map((feature) => (
                           <div key={feature.key} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                             <div>
@@ -1516,7 +1518,7 @@ export default function AdminPage() {
                               <p className="text-muted-foreground text-sm">{feature.desc}</p>
                             </div>
                             <Switch
-                              checked={(maintenanceSettings as any)?.[feature.key] ?? true}
+                              checked={(maintenanceSettings as any)?.[feature.key] ?? (feature.key === "loginEnabled" || feature.key === "depositsEnabled" || feature.key === "withdrawalsEnabled" || feature.key === "tradingEnabled")}
                               onCheckedChange={(checked) => updateMaintenanceMutation.mutate({ [feature.key]: checked })}
                               data-testid={`toggle-${feature.key}`}
                             />

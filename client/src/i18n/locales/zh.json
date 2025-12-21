@@ -115,5 +115,26 @@
   "chat": {
     "sendMessage": "输入消息...",
     "noMessages": "暂无消息，开始对话吧！"
+  },
+  "support": {
+    "title": "客户支持",
+    "createTicket": "创建支持工单",
+    "myTickets": "我的工单",
+    "allTickets": "所有工单",
+    "subject": "主题",
+    "message": "消息",
+    "status": "状态",
+    "open": "开放",
+    "closed": "关闭",
+    "inProgress": "进行中",
+    "resolved": "已解决",
+    "reply": "回复支持",
+    "noTickets": "无支持工单"
+  },
+  "admin": {
+    "autoWithdrawal": "自动提现",
+    "autoWithdrawalDesc": "启用无需管理员批准的即时提现",
+    "kycVerification": "需要KYC验证",
+    "kycVerificationDesc": "要求KYC验证才能发布广告"
   }
 }

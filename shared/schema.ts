@@ -282,6 +282,27 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Support Tickets Table
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Support Ticket Messages Table
+export const supportMessages = pgTable("support_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id, { onDelete: "cascade" }),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Maintenance Settings Table
 export const maintenanceSettings = pgTable("maintenance_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -293,6 +314,8 @@ export const maintenanceSettings = pgTable("maintenance_settings", {
   withdrawalsEnabled: boolean("withdrawals_enabled").notNull().default(true),
   tradingEnabled: boolean("trading_enabled").notNull().default(true),
   loginEnabled: boolean("login_enabled").notNull().default(true),
+  autoWithdrawalEnabled: boolean("auto_withdrawal_enabled").notNull().default(false),
+  kycRequired: boolean("kyc_required").notNull().default(false),
   updatedBy: varchar("updated_by").references(() => users.id),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
