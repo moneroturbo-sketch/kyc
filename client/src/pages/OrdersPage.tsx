@@ -153,38 +153,40 @@ export default function OrdersPage() {
             className="p-4 rounded-xl bg-card border border-border hover:border-primary transition-colors"
             data-testid={`order-card-${order.id}`}
           >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-muted">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="p-2 rounded-lg bg-muted flex-shrink-0">
                   {getStatusIcon(order.status)}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-foreground font-medium">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-foreground font-medium text-sm sm:text-base truncate">
                       Order #{order.id.slice(0, 8)}
                     </span>
-                    {getStatusBadge(order.status)}
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(order.status)}
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(order.createdAt).toLocaleDateString()} at{" "}
-                    {new Date(order.createdAt).toLocaleTimeString()}
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="text-right">
-                  <p className="text-xl font-bold text-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="text-left">
+                  <p className="text-base sm:text-lg font-bold text-foreground">
                     {Math.floor(parseFloat(order.amount))} account{Math.floor(parseFloat(order.amount)) !== 1 ? 's' : ''}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    ${Math.floor(parseFloat(order.fiatAmount))} • {order.paymentMethod}
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    ${Math.floor(parseFloat(order.fiatAmount))} • <span className="hidden sm:inline">{order.paymentMethod}</span>
                   </p>
                 </div>
-                <Link href={`/order/${order.id}`}>
-                  <Button variant="outline" size="sm" className="gap-2" data-testid={`button-view-order-${order.id}`}>
-                    View Details
-                    <ArrowRight className="h-4 w-4" />
+                <Link href={`/order/${order.id}`} className="w-full sm:w-auto">
+                  <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" data-testid={`button-view-order-${order.id}`}>
+                    <span className="hidden sm:inline">View Details</span>
+                    <span className="sm:hidden">View</span>
+                    <ArrowRight className="h-3 sm:h-4 w-3 sm:w-4" />
                   </Button>
                 </Link>
               </div>
@@ -216,13 +218,13 @@ export default function OrdersPage() {
             className="p-4 rounded-xl bg-card border border-border hover:border-primary transition-colors"
             data-testid={`loader-order-card-${order.id}`}
           >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Shield className="h-5 w-5 text-primary" />
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                  <Shield className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-foreground font-medium">
                       {order.role === "loader" ? "Loading to" : "Receiving from"}{" "}
                       {order.role === "loader" ? order.receiverUsername : order.loaderUsername}

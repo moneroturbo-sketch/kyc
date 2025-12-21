@@ -170,7 +170,7 @@ export default function TradePage() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
         <Card className="bg-gray-900/50 border-gray-800">
           <CardHeader>
             <div className="flex items-center justify-between">

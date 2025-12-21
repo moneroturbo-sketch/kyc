@@ -146,22 +146,18 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-background border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-4">
-            <button className="p-1" data-testid="button-back">
-              <ChevronLeft className="h-6 w-6 text-foreground" />
-            </button>
-            <div className="flex items-center gap-6">
-              <span className="text-foreground font-semibold border-b-2 border-foreground pb-1">
-                {getSectionTitle()}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-3 gap-2">
+          <button className="p-1 flex-shrink-0" data-testid="button-back">
+            <ChevronLeft className="h-5 sm:h-6 w-5 sm:w-6 text-foreground" />
+          </button>
+          <span className="text-sm sm:text-base text-foreground font-semibold border-b-2 border-foreground pb-1 truncate">
+            {getSectionTitle()}
+          </span>
+          <div className="flex items-center gap-1 flex-shrink-0">
             <ThemeToggle />
             <Link href="/notifications">
               <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
-                <Bell className="h-5 w-5 text-muted-foreground" />
+                <Bell className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
                     {unreadCount > 9 ? "9+" : unreadCount}
@@ -172,43 +168,45 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="px-2 sm:px-4 pb-3">
+          <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-1">
             <button
               onClick={() => setMainSection("feed")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                 mainSection === "feed"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
               data-testid="section-feed"
             >
-              <Rss className="h-4 w-4" />
+              <Rss className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
               Feed
             </button>
             <button
               onClick={() => setMainSection("p2p")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                 mainSection === "p2p"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
               data-testid="section-p2p"
             >
-              <Store className="h-4 w-4" />
-              KYC Marketplace
+              <Store className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+              <span className="hidden sm:inline">KYC Marketplace</span>
+              <span className="sm:hidden">KYC</span>
             </button>
             <button
               onClick={() => setMainSection("loaders")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                 mainSection === "loaders"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
               data-testid="section-loaders"
             >
-              <Loader2 className="h-4 w-4" />
-              Loaders Zone
+              <Loader2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+              <span className="hidden sm:inline">Loaders Zone</span>
+              <span className="sm:hidden">Loaders</span>
             </button>
           </div>
         </div>
