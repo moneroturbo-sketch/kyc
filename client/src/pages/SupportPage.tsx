@@ -111,11 +111,11 @@ export default function SupportPage() {
   const [flagReason, setFlagReason] = useState("");
   const [viewingDocuments, setViewingDocuments] = useState<KycApplication | null>(null);
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
+  const [ticketSubject, setTicketSubject] = useState("");
+  const [ticketMessage, setTicketMessage] = useState("");
+  const [submittingTicket, setSubmittingTicket] = useState(false);
 
-  if (user?.role !== "support" && user?.role !== "admin") {
-    setLocation("/");
-    return null;
-  }
+  const isAdmin = user?.role === "admin" || user?.role === "support";
 
   const getDocuments = (kyc: KycApplication) => {
     const docs: { url: string; label: string }[] = [];
@@ -263,6 +263,31 @@ export default function SupportPage() {
     searchUser();
   };
 
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketSubject.trim() || !ticketMessage.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Please fill in all fields" });
+      return;
+    }
+    
+    setSubmittingTicket(true);
+    try {
+      const res = await fetchWithAuth("/api/support/tickets", {
+        method: "POST",
+        body: JSON.stringify({ subject: ticketSubject, message: ticketMessage }),
+      });
+      if (!res.ok) throw new Error("Failed to submit ticket");
+      toast({ title: "Success", description: "Your support ticket has been created. We'll respond soon!" });
+      setTicketSubject("");
+      setTicketMessage("");
+      queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to create support ticket" });
+    } finally {
+      setSubmittingTicket(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6" data-testid="support-page">
@@ -271,6 +296,51 @@ export default function SupportPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Customer Support</h1>
         </div>
 
+        {/* Customer Support Ticket Form */}
+        {!isAdmin && (
+          <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <CardHeader>
+              <CardTitle className="text-gray-900 dark:text-white">Report Issue or Get Help</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitTicket} className="space-y-4">
+                <div>
+                  <Label htmlFor="subject" className="text-gray-700 dark:text-gray-300">Subject</Label>
+                  <Input
+                    id="subject"
+                    placeholder="What's the issue? (e.g., 'Withdrawal not received', 'Cannot post ads')"
+                    value={ticketSubject}
+                    onChange={(e) => setTicketSubject(e.target.value)}
+                    className="mt-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
+                    data-testid="input-ticket-subject"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="message" className="text-gray-700 dark:text-gray-300">Message</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Please describe the issue in detail. Include order IDs or specific details if applicable..."
+                    value={ticketMessage}
+                    onChange={(e) => setTicketMessage(e.target.value)}
+                    className="mt-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 min-h-32"
+                    data-testid="textarea-ticket-message"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={submittingTicket}
+                  data-testid="button-submit-ticket"
+                >
+                  {submittingTicket ? "Submitting..." : "Submit Support Ticket"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {isAdmin && (
+          <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-gradient-to-br from-blue-900/40 to-blue-800/30 border-blue-700">
             <CardContent className="pt-6">
@@ -704,6 +774,8 @@ export default function SupportPage() {
             </Card>
           </TabsContent>
         </Tabs>
+          </>
+        )}
       </div>
     </Layout>
   );

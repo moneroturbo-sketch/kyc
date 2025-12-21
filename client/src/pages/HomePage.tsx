@@ -137,7 +137,7 @@ export default function HomePage() {
   const getSectionTitle = () => {
     switch (mainSection) {
       case "feed":
-        return t('nav.notifications');
+        return "Feed";
       case "p2p":
         return t('marketplace.title');
       case "loaders":
@@ -184,7 +184,7 @@ export default function HomePage() {
               data-testid="section-feed"
             >
               <Rss className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-              {t('nav.notifications')}
+              Feed
             </button>
             <button
               onClick={() => setMainSection("p2p")}
