@@ -75,12 +75,17 @@ interface VendorProfile {
 export default function ProfilePage() {
   const [location, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
-  const userId = params.get("id");
+  let userId = params.get("id");
   const currentUser = getUser();
   const [isOwnProfile, setIsOwnProfile] = useState(false);
 
+  // If no userId in URL, use current user's ID for their own profile
+  if (!userId && currentUser?.id) {
+    userId = currentUser.id;
+  }
+
   useEffect(() => {
-    setIsOwnProfile(userId === currentUser?.id || !userId);
+    setIsOwnProfile(userId === currentUser?.id || !params.get("id"));
   }, [userId, currentUser?.id]);
 
   const { data: userProfile, isLoading: loadingProfile } = useQuery({
