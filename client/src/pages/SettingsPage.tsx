@@ -216,13 +216,13 @@ export default function SettingsPage() {
   return (
     <Layout>
       <div className="space-y-6 max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t('settings.title')}</h1>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
               <User className="h-5 w-5" />
-              Account Information
+              {t('settings.account')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -267,12 +267,12 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-foreground font-medium text-lg">{me?.username}</p>
-                    <p className="text-muted-foreground text-sm">Click the image to change your profile picture</p>
+                    <p className="text-muted-foreground text-sm">{t('common.edit')}</p>
                     <Badge className="mt-2">{me?.role}</Badge>
                   </div>
                 </div>
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-muted-foreground text-sm">Email</p>
+                  <p className="text-muted-foreground text-sm">{t('auth.email')}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-foreground font-medium">{me?.email}</p>
                     {me?.emailVerified ? (
@@ -283,7 +283,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-muted-foreground text-sm">Member since</p>
+                  <p className="text-muted-foreground text-sm">{t('common.confirm')}</p>
                   <p className="text-foreground font-medium">
                     {new Date(me?.createdAt).toLocaleDateString()}
                   </p>
@@ -297,10 +297,10 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Security
+              {t('settings.security')}
             </CardTitle>
             <CardDescription>
-              Protect your account with two-factor authentication
+              {t('settings.twoFactor')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

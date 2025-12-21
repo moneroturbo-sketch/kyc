@@ -69,6 +69,7 @@ interface Exchange {
 type MainSection = "feed" | "p2p" | "loaders";
 
 export default function HomePage() {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const [mainSection, setMainSection] = useState<MainSection>("feed");
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
@@ -135,13 +136,13 @@ export default function HomePage() {
   const getSectionTitle = () => {
     switch (mainSection) {
       case "feed":
-        return "Feed";
+        return t('nav.notifications');
       case "p2p":
-        return "KYC Marketplace";
+        return t('marketplace.title');
       case "loaders":
         return "Loaders";
       default:
-        return "Home";
+        return t('nav.marketplace');
     }
   };
 
@@ -182,7 +183,7 @@ export default function HomePage() {
               data-testid="section-feed"
             >
               <Rss className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-              Feed
+              {t('nav.notifications')}
             </button>
             <button
               onClick={() => setMainSection("p2p")}
@@ -194,7 +195,7 @@ export default function HomePage() {
               data-testid="section-p2p"
             >
               <Store className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-              <span className="hidden sm:inline">KYC Marketplace</span>
+              <span className="hidden sm:inline">{t('marketplace.title')}</span>
               <span className="sm:hidden">KYC</span>
             </button>
             <button
@@ -220,7 +221,7 @@ export default function HomePage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search accounts..."
+                  placeholder={t('common.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-muted rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -240,7 +241,7 @@ export default function HomePage() {
                   }`}
                   data-testid="tab-buy"
                 >
-                  Buy
+                  {t('marketplace.buy')}
                 </button>
                 <button
                   onClick={() => setActiveTab("sell")}
@@ -251,7 +252,7 @@ export default function HomePage() {
                   }`}
                   data-testid="tab-sell"
                 >
-                  Sell
+                  {t('marketplace.sell')}
                 </button>
               </div>
             </div>
