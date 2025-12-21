@@ -1321,7 +1321,6 @@ export async function registerRoutes(
         orderId: req.params.id,
         senderId: req.user!.userId,
         message: `Order cancelled: ${reason || "No reason provided"}`,
-        isSystemMessage: true,
       });
 
       res.json({ message: "Order cancelled successfully" });
