@@ -377,6 +377,9 @@ export async function registerRoutes(
       const profile = await storage.createVendorProfile(validatedData);
 
       await storage.updateUser(req.user!.userId, { role: "vendor" });
+      
+      // Automatically grant verified badge when user becomes vendor
+      await storage.updateVendorProfile(profile.id, { hasVerifyBadge: true });
 
       await storage.createAuditLog({
         userId: req.user!.userId,
@@ -1595,7 +1598,7 @@ export async function registerRoutes(
           withdrawalsEnabled: true,
           minWithdrawalAmount: "10",
           withdrawalFeePercent: "0.1",
-          withdrawalFeeFixed: "1",
+          withdrawalFeeFixed: "0.5",
         });
       }
 

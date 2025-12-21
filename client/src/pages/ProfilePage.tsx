@@ -209,6 +209,12 @@ export default function ProfilePage() {
                     {userProfile.isVerified && (
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                     )}
+                    {userProfile.hasVerifyBadge && (
+                      <Badge className="bg-yellow-600 flex items-center gap-1 flex-shrink-0">
+                        <Star className="h-3 w-3" />
+                        Verified
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-2 mb-3">
