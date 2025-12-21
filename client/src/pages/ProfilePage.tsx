@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { fetchWithAuth, getUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,7 @@ interface VendorProfile {
 }
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   let userId = params.get("id");

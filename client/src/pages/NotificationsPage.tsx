@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const { data: notifications, isLoading } = useQuery<Notification[]>({

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ interface Offer {
 }
 
 export default function TradePage() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/trade/:id");
   const [, setLocation] = useLocation();
   const offerId = params?.id;

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ interface MaintenanceSettings {
 }
 
 export default function MaintenancePage() {
+  const { t } = useTranslation();
   const { data: settings, refetch, isRefetching } = useQuery<MaintenanceSettings>({
     queryKey: ["public-maintenance"],
     queryFn: async () => {

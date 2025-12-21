@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,9 +64,12 @@ interface LoaderDispute {
   id: string;
   orderId: string;
   openedBy: string;
+  openerUsername?: string;
   reason: string;
   status: string;
   createdAt: string;
+  loaderUsername?: string;
+  receiverUsername?: string;
   order?: {
     id: string;
     loaderId: string;
@@ -73,9 +77,6 @@ interface LoaderDispute {
     dealAmount: string;
     status: string;
   };
-  openerUsername?: string;
-  loaderUsername?: string;
-  receiverUsername?: string;
 }
 
 interface LoaderDisputeDetails {
