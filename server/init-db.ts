@@ -84,6 +84,7 @@ async function createTablesIfNotExist() {
       average_rating NUMERIC(3, 2) DEFAULT 0,
       total_ratings INTEGER NOT NULL DEFAULT 0,
       suspicious_activity_score INTEGER NOT NULL DEFAULT 0,
+      has_verify_badge BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMP NOT NULL DEFAULT now(),
       updated_at TIMESTAMP NOT NULL DEFAULT now()
     );
@@ -235,6 +236,8 @@ async function createTablesIfNotExist() {
       withdrawals_enabled BOOLEAN NOT NULL DEFAULT true,
       trading_enabled BOOLEAN NOT NULL DEFAULT true,
       login_enabled BOOLEAN NOT NULL DEFAULT true,
+      auto_withdrawal_enabled BOOLEAN NOT NULL DEFAULT false,
+      kyc_required BOOLEAN NOT NULL DEFAULT false,
       updated_by VARCHAR REFERENCES users(id),
       updated_at TIMESTAMP NOT NULL DEFAULT now()
     );
