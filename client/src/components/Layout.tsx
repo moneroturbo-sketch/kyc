@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/marketplace/ThemeToggle";
+import { LanguageSelector } from "@/components/marketplace/LanguageSelector";
 import {
   Home,
   Wallet,
@@ -28,6 +29,7 @@ import {
   AlertTriangle,
   Clock,
   Lock,
+  Headphones,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -146,6 +148,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="flex items-center gap-4">
+              <LanguageSelector />
               <ThemeToggle />
               {authenticated ? (
                 <>
@@ -166,6 +169,12 @@ export default function Layout({ children }: LayoutProps) {
                           {unreadCount > 9 ? "9+" : unreadCount}
                         </Badge>
                       )}
+                    </Button>
+                  </Link>
+
+                  <Link href="/support">
+                    <Button variant="ghost" size="icon" className="relative" data-testid="button-support-chat">
+                      <Headphones className="h-5 w-5" />
                     </Button>
                   </Link>
 

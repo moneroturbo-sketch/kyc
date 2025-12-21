@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { isAuthenticated, getUser, fetchWithAuth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/marketplace/ThemeToggle";
+import { LanguageSelector } from "@/components/marketplace/LanguageSelector";
 import SocialFeed from "@/components/social/SocialFeed";
 import LoadersZone from "@/components/loaders/LoadersZone";
 import {
@@ -30,6 +31,7 @@ import {
   Loader2,
   Shield,
   Filter,
+  Headphones,
 } from "lucide-react";
 
 interface Offer {
