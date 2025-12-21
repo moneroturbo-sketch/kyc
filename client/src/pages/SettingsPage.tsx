@@ -215,8 +215,8 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground">{t('settings.title')}</h1>
+      <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto px-2 sm:px-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">{t('settings.title')}</h1>
 
         <Card>
           <CardHeader>

@@ -101,10 +101,10 @@ export default function MaintenancePage() {
           </div>
           
           <div className="space-y-3">
-            <h1 className="text-3xl md:text-4xl font-bold text-white" data-testid="maintenance-title">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white truncate" data-testid="maintenance-title">
               {getModeTitle()}
             </h1>
-            <p className="text-gray-300 text-lg leading-relaxed" data-testid="maintenance-message">
+            <p className="text-gray-300 text-base sm:text-lg leading-relaxed" data-testid="maintenance-message">
               {getModeDescription()}
             </p>
           </div>

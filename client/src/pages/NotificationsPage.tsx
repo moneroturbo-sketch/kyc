@@ -74,9 +74,9 @@ export default function NotificationsPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Notifications</h1>
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white truncate">Notifications</h1>
           {notifications && notifications.some((n) => !n.isRead) && (
             <Badge className="bg-purple-600">
               {notifications.filter((n) => !n.isRead).length} unread

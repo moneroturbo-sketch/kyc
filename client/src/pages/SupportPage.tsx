@@ -292,10 +292,10 @@ export default function SupportPage() {
 
   return (
     <Layout>
-      <div className="space-y-6" data-testid="support-page">
-        <div className="flex items-center gap-3">
-          <Headphones className="h-8 w-8 text-green-500" />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Customer Support</h1>
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4" data-testid="support-page">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Headphones className="h-6 sm:h-8 w-6 sm:w-8 text-green-500 flex-shrink-0" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">Customer Support</h1>
         </div>
 
         {/* Customer Support Ticket Form */}

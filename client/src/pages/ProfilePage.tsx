@@ -168,22 +168,22 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-4xl mx-auto px-2 sm:px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               onClick={() => window.history.back()}
-              className="p-1"
+              className="p-1 flex-shrink-0"
               data-testid="button-back"
             >
-              <ChevronLeft className="h-6 w-6 text-foreground" />
+              <ChevronLeft className="h-5 sm:h-6 w-5 sm:w-6 text-foreground" />
             </button>
-            <h1 className="text-lg font-semibold text-foreground">User Profile</h1>
+            <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">User Profile</h1>
           </div>
           <ThemeToggle />
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-4xl mx-auto px-2 sm:px-4 py-6 space-y-4 sm:space-y-6">
         {/* Profile Header Card */}
         {userProfile && (
           <Card className="bg-card border-border">

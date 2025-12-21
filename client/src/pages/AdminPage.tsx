@@ -588,10 +588,10 @@ export default function AdminPage() {
 
   return (
     <Layout>
-      <div className="space-y-6" data-testid="admin-page">
-        <div className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4" data-testid="admin-page">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Shield className="h-6 sm:h-8 w-6 sm:w-8 text-primary flex-shrink-0" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Admin Dashboard</h1>
         </div>
 
         <Tabs defaultValue="stats" className="space-y-4">

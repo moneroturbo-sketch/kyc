@@ -424,9 +424,9 @@ export default function OrderDetailPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white truncate">
             Order #{order.id.slice(0, 8)}
           </h1>
           <Badge className={
