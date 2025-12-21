@@ -137,11 +137,11 @@ export default function HomePage() {
   const getSectionTitle = () => {
     switch (mainSection) {
       case "feed":
-        return "Feed";
+        return t('feed.title');
       case "p2p":
         return t('marketplace.title');
       case "loaders":
-        return "Loaders";
+        return t('loaders.title');
       default:
         return t('nav.marketplace');
     }
@@ -184,7 +184,7 @@ export default function HomePage() {
               data-testid="section-feed"
             >
               <Rss className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-              Feed
+              {t('feed.title')}
             </button>
             <button
               onClick={() => setMainSection("p2p")}
@@ -209,8 +209,8 @@ export default function HomePage() {
               data-testid="section-loaders"
             >
               <Loader2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-              <span className="hidden sm:inline">Loaders Zone</span>
-              <span className="sm:hidden">Loaders</span>
+              <span className="hidden sm:inline">{t('loaders.title')}</span>
+              <span className="sm:hidden">{t('loaders.shortTitle')}</span>
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -271,6 +272,7 @@ function CommentCard({
 }
 
 export default function SocialFeed() {
+  const { t } = useTranslation();
   const [newPost, setNewPost] = useState("");
   const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
   const [commentText, setCommentText] = useState("");
@@ -472,7 +474,7 @@ export default function SocialFeed() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by username or keyword..."
+            placeholder={t('feed.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -490,15 +492,15 @@ export default function SocialFeed() {
           )}
         </div>
         <Button onClick={handleSearch} data-testid="search-btn">
-          Search
+          {t('common.search')}
         </Button>
       </div>
 
       {activeSearch && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Showing results for: "{activeSearch}"</span>
+          <span>{t('feed.showingResults')} "{activeSearch}"</span>
           <button onClick={handleClearSearch} className="text-primary hover:underline">
-            Clear
+            {t('feed.clear')}
           </button>
         </div>
       )}
@@ -506,7 +508,7 @@ export default function SocialFeed() {
       {isAuthenticated() && (
         <div className="bg-card border border-border rounded-lg p-4" data-testid="create-post-form">
           <Textarea
-            placeholder="What's on your mind?"
+            placeholder={t('feed.whatsOnYourMind')}
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
             maxLength={800}
@@ -524,7 +526,7 @@ export default function SocialFeed() {
               data-testid="submit-post-btn"
             >
               <Send className="h-4 w-4 mr-1" />
-              Post
+              {t('feed.post')}
             </Button>
           </div>
         </div>
@@ -556,8 +558,8 @@ export default function SocialFeed() {
       ) : (
         <div className="text-center py-12 text-muted-foreground">
           <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>No posts yet</p>
-          <p className="text-sm">Be the first to share something!</p>
+          <p>{t('feed.noPostsYet')}</p>
+          <p className="text-sm">{t('feed.beFirstToPost')}</p>
         </div>
       )}
 
@@ -566,7 +568,7 @@ export default function SocialFeed() {
           <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <MessageCircle className="h-5 w-5 text-primary" />
-              Comments
+              {t('feed.comments')}
             </DialogTitle>
           </DialogHeader>
           
@@ -584,7 +586,7 @@ export default function SocialFeed() {
                         <BadgeCheck className="h-4 w-4 text-primary" />
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">Original post</span>
+                    <span className="text-xs text-muted-foreground">{t('feed.originalPost')}</span>
                   </div>
                 </div>
                 <p className="text-sm leading-relaxed">{renderContentWithMentions(selectedPost.content)}</p>
@@ -605,8 +607,8 @@ export default function SocialFeed() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                      <p className="text-sm font-medium text-muted-foreground">No comments yet</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">Be the first to share your thoughts</p>
+                      <p className="text-sm font-medium text-muted-foreground">{t('feed.noComments')}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">{t('feed.beFirstToComment')}</p>
                     </div>
                   )}
                 </div>
@@ -616,7 +618,7 @@ export default function SocialFeed() {
                 <div className="px-6 py-4 border-t bg-muted/20">
                   <div className="flex gap-3">
                     <Textarea
-                      placeholder="Share your thoughts..."
+                      placeholder={t('feed.shareYourThoughts')}
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       maxLength={500}

@@ -136,5 +136,24 @@
     "autoWithdrawalDesc": "Enable instant withdrawals without admin approval",
     "kycVerification": "KYC Verification Required",
     "kycVerificationDesc": "Require KYC verification to post ads"
+  },
+  "feed": {
+    "title": "Feed",
+    "whatsOnYourMind": "What's on your mind?",
+    "searchPlaceholder": "Search by username or keyword...",
+    "post": "Post",
+    "comments": "Comments",
+    "originalPost": "Original post",
+    "showingResults": "Showing results for:",
+    "clear": "Clear",
+    "noComments": "No comments yet",
+    "beFirstToComment": "Be the first to share your thoughts",
+    "noPostsYet": "No posts yet",
+    "beFirstToPost": "Be the first to share something!",
+    "shareYourThoughts": "Share your thoughts..."
+  },
+  "loaders": {
+    "title": "Loaders Zone",
+    "shortTitle": "Loaders"
   }
 }

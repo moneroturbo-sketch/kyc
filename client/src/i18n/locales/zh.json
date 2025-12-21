@@ -136,5 +136,24 @@
     "autoWithdrawalDesc": "启用无需管理员批准的即时提现",
     "kycVerification": "需要KYC验证",
     "kycVerificationDesc": "要求KYC验证才能发布广告"
+  },
+  "feed": {
+    "title": "动态",
+    "whatsOnYourMind": "你在想什么？",
+    "searchPlaceholder": "按用户名或关键字搜索...",
+    "post": "发布",
+    "comments": "评论",
+    "originalPost": "原始帖子",
+    "showingResults": "搜索结果：",
+    "clear": "清除",
+    "noComments": "暂无评论",
+    "beFirstToComment": "成为第一个分享想法的人",
+    "noPostsYet": "暂无动态",
+    "beFirstToPost": "成为第一个分享的人！",
+    "shareYourThoughts": "分享你的想法..."
+  },
+  "loaders": {
+    "title": "加载者专区",
+    "shortTitle": "加载者"
   }
 }
