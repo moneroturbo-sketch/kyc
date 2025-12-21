@@ -150,7 +150,14 @@
     "beFirstToComment": "Be the first to share your thoughts",
     "noPostsYet": "No posts yet",
     "beFirstToPost": "Be the first to share something!",
-    "shareYourThoughts": "Share your thoughts..."
+    "shareYourThoughts": "Share your thoughts...",
+    "like": "Like",
+    "unlike": "Unlike",
+    "dislike": "Dislike",
+    "undislike": "Remove dislike",
+    "comment": "Comment",
+    "deletePost": "Delete post",
+    "deleteComment": "Delete comment"
   },
   "loaders": {
     "title": "Loaders Zone",
