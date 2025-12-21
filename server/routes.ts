@@ -325,7 +325,11 @@ export async function registerRoutes(
 
       let kyc;
       if (existingKyc) {
-        kyc = await storage.updateKyc(existingKyc.id, kycData);
+        kyc = await storage.updateKyc(existingKyc.id, {
+          ...kycData,
+          status: "pending",
+          submittedAt: new Date()
+        });
       } else {
         kyc = await storage.createKyc(kycData);
       }
