@@ -347,21 +347,21 @@ export default function SupportPage() {
 
         {/* Customer Support - Chat View */}
         {!isAdmin && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-96 lg:h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-96">
             {/* Tickets List */}
-            <div className="lg:col-span-1 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+            <div className="lg:col-span-1 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col min-h-96">
               <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Your Tickets</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Your Tickets ({userTickets?.length || 0})</h3>
               </div>
               <div className="flex-1 overflow-y-auto space-y-2 p-2">
                 {loadingTickets ? (
                   <div className="space-y-2 p-2">
                     {[1,2,3].map(i => <Skeleton key={i} className="h-12 bg-gray-200 dark:bg-gray-800" />)}
                   </div>
-                ) : userTickets?.length === 0 ? (
+                ) : !userTickets || userTickets.length === 0 ? (
                   <div className="p-4 text-center text-sm text-gray-500">No tickets yet</div>
                 ) : (
-                  userTickets?.map((ticket: any) => (
+                  userTickets.map((ticket: any) => (
                     <button
                       key={ticket.id}
                       onClick={() => setSelectedTicket(ticket.id)}
@@ -377,7 +377,7 @@ export default function SupportPage() {
             </div>
 
             {/* Chat View or New Ticket Form */}
-            <div className="lg:col-span-3 bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+            <div className="lg:col-span-3 bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col min-h-96">
               {selectedTicket && selectedTicketData ? (
                 // Existing Ticket Chat
                 <>
