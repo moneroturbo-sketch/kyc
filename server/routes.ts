@@ -38,10 +38,44 @@ export async function registerRoutes(
 
   // ==================== AUTH ROUTES ====================
   
-  // Register
+  // Send Email Verification Code (Step 1)
+  app.post("/api/auth/send-verification-code", emailVerificationLimiter, requireLoginEnabled, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      
+      await sendVerificationEmail(email, code);
+      
+      res.json({
+        message: "Verification code sent to your email",
+        expirationMinutes: 10,
+        code, // For development only - remove in production
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to send verification code" });
+    }
+  });
+
+  // Register (Step 2 - Verify Code + Create Account)
   app.post("/api/auth/register", registerLimiter, requireLoginEnabled, async (req, res) => {
     try {
-      const validatedData = insertUserSchema.parse(req.body);
+      const { username, email, password, verificationCode } = req.body;
+      
+      if (!verificationCode) {
+        return res.status(400).json({ message: "Verification code is required" });
+      }
+
+      const validatedData = insertUserSchema.parse({ username, email, password });
       
       const existingUser = await storage.getUserByEmail(validatedData.email);
       if (existingUser) {
@@ -58,6 +92,7 @@ export async function registerRoutes(
       const user = await storage.createUser({
         ...validatedData,
         password: hashedPassword,
+        emailVerified: true,
       });
 
       await storage.createWallet({
@@ -80,14 +115,6 @@ export async function registerRoutes(
         role: user.role,
       });
 
-      const code = generateVerificationCode();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      await storage.createEmailVerificationCode({
-        userId: user.id,
-        code,
-        expiresAt,
-      });
-      await sendVerificationEmail(user.email, code);
       res.json({
         token,
         user: {

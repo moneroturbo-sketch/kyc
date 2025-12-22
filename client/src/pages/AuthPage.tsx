@@ -16,6 +16,8 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [loginForm, setLoginForm] = useState({ username: "", password: "", twoFactorToken: "" });
   const [registerForm, setRegisterForm] = useState({ username: "", email: "", password: "" });
+  const [verificationCode, setVerificationCode] = useState("");
+  const [registrationStep, setRegistrationStep] = useState<"email" | "verify" | "create">("email");
   const [requires2FA, setRequires2FA] = useState(false);
 
   const loginMutation = useMutation({
@@ -45,8 +47,28 @@ export default function AuthPage() {
     },
   });
 
+  const sendVerificationMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch("/api/auth/send-verification-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      return json;
+    },
+    onSuccess: () => {
+      toast({ title: "Code Sent", description: "Check your email for the verification code" });
+      setRegistrationStep("verify");
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Failed", description: error.message });
+    },
+  });
+
   const registerMutation = useMutation({
-    mutationFn: async (data: typeof registerForm) => {
+    mutationFn: async (data: typeof registerForm & { verificationCode: string }) => {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,66 +177,140 @@ export default function AuthPage() {
               </TabsContent>
 
               <TabsContent value="register">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    registerMutation.mutate(registerForm);
-                  }}
-                  className="space-y-4"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor="register-username" className="text-foreground">Username</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="register-username"
-                        data-testid="input-register-username"
-                        placeholder="Choose username"
-                        className="pl-10 bg-muted border-border text-foreground"
-                        value={registerForm.username}
-                        onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-email" className="text-foreground">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="register-email"
-                        data-testid="input-register-email"
-                        type="email"
-                        placeholder="Enter email"
-                        className="pl-10 bg-muted border-border text-foreground"
-                        value={registerForm.email}
-                        onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password" className="text-foreground">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="register-password"
-                        data-testid="input-register-password"
-                        type="password"
-                        placeholder="Create password"
-                        className="pl-10 bg-muted border-border text-foreground"
-                        value={registerForm.password}
-                        onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    data-testid="button-register"
-                    className="w-full"
-                    disabled={registerMutation.isPending}
+                {registrationStep === "email" && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      sendVerificationMutation.mutate(registerForm.email);
+                    }}
+                    className="space-y-4"
                   >
-                    {registerMutation.isPending ? "Creating account..." : "Create Account"}
-                  </Button>
-                </form>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-email" className="text-foreground">Email Address</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          id="register-email"
+                          data-testid="input-register-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          className="pl-10 bg-muted border-border text-foreground"
+                          value={registerForm.email}
+                          onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      data-testid="button-send-code"
+                      className="w-full"
+                      disabled={sendVerificationMutation.isPending}
+                    >
+                      {sendVerificationMutation.isPending ? "Sending..." : "Send Verification Code"}
+                    </Button>
+                  </form>
+                )}
+
+                {registrationStep === "verify" && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setRegistrationStep("create");
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label className="text-foreground">Verification Code</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Enter the code sent to {registerForm.email}</p>
+                      <div className="relative">
+                        <Input
+                          data-testid="input-verification-code"
+                          placeholder="Enter 6-digit code"
+                          className="bg-muted border-border text-foreground text-center text-lg tracking-widest"
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      data-testid="button-verify-code"
+                      className="w-full"
+                      disabled={verificationCode.length !== 6}
+                    >
+                      Continue
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setRegistrationStep("email")}
+                    >
+                      Back
+                    </Button>
+                  </form>
+                )}
+
+                {registrationStep === "create" && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      registerMutation.mutate({ ...registerForm, verificationCode });
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="register-username" className="text-foreground">Username</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          id="register-username"
+                          data-testid="input-register-username"
+                          placeholder="Choose username"
+                          className="pl-10 bg-muted border-border text-foreground"
+                          value={registerForm.username}
+                          onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-password" className="text-foreground">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          id="register-password"
+                          data-testid="input-register-password"
+                          type="password"
+                          placeholder="Create password"
+                          className="pl-10 bg-muted border-border text-foreground"
+                          value={registerForm.password}
+                          onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      data-testid="button-register"
+                      className="w-full"
+                      disabled={registerMutation.isPending}
+                    >
+                      {registerMutation.isPending ? "Creating account..." : "Create Account"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setRegistrationStep("verify")}
+                    >
+                      Back
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
