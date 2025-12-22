@@ -5511,9 +5511,9 @@ export async function registerRoutes(
 
       res.json({
         totalUsers: allUsers.length,
-        usersToday,
-        usersThisWeek,
-        usersThisMonth,
+        todayUsers: usersToday,
+        weekUsers: usersThisWeek,
+        monthUsers: usersThisMonth,
         frozenAccounts,
         totalBalance,
         pendingWithdrawals: pendingAmount.toFixed(2),
