@@ -120,7 +120,8 @@ export default function SupportPage() {
   const [newMessageText, setNewMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  const isAdmin = user?.role === "admin" || user?.role === "support";
+  const isAdmin = user?.role === "admin";
+  const isSupport = user?.role === "support";
 
   const getDocuments = (kyc: KycApplication) => {
     const docs: { url: string; label: string }[] = [];
@@ -346,7 +347,7 @@ export default function SupportPage() {
         </div>
 
         {/* Customer Support - Chat View */}
-        {!isAdmin && (
+        {!isAdmin && !isSupport && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-96">
             {/* Tickets List */}
             <div className="lg:col-span-1 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col min-h-96">
@@ -449,6 +450,84 @@ export default function SupportPage() {
                       {submittingTicket ? "Submitting..." : "Create Ticket"}
                     </Button>
                   </form>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Support Staff - Ticket Queue */}
+        {isSupport && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-96">
+            {/* All Tickets List */}
+            <div className="lg:col-span-1 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col min-h-96">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Support Queue ({userTickets?.length || 0})</h3>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2 p-2">
+                {loadingTickets ? (
+                  <div className="space-y-2 p-2">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-12 bg-gray-200 dark:bg-gray-800" />)}
+                  </div>
+                ) : !userTickets || userTickets.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-gray-500">No open tickets</div>
+                ) : (
+                  userTickets.map((ticket: any) => (
+                    <button
+                      key={ticket.id}
+                      onClick={() => setSelectedTicket(ticket.id)}
+                      className={`w-full text-left p-3 rounded-lg transition-colors ${selectedTicket === ticket.id ? "bg-blue-600 text-white" : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                      data-testid={`support-ticket-${ticket.id}`}
+                    >
+                      <div className="font-medium text-sm truncate">{ticket.subject}</div>
+                      <div className={`text-xs truncate ${selectedTicket === ticket.id ? "text-blue-100" : "text-gray-500 dark:text-gray-400"}`}>
+                        {userTickets.find((t: any) => t.id === ticket.id) && new Date(ticket.createdAt).toLocaleDateString()}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Support Chat View */}
+            <div className="lg:col-span-3 bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col min-h-96">
+              {selectedTicket && selectedTicketData ? (
+                <>
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{selectedTicketData.subject}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">From: <span className="font-medium">{selectedTicketData.userId}</span> | Status: <span className="capitalize">{selectedTicketData.status}</span></p>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedTicketData.message}</p>
+                      <p className="text-xs text-gray-500 mt-2">{new Date(selectedTicketData.createdAt).toLocaleString()}</p>
+                    </div>
+                    {selectedTicketData.messages?.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((msg: any) => (
+                      <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
+                        <div className={`p-3 rounded-lg max-w-xs ${msg.senderId === user?.id ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"}`}>
+                          <p className="text-sm">{msg.message}</p>
+                          <p className={`text-xs mt-1 ${msg.senderId === user?.id ? "text-blue-100" : "text-gray-500"}`}>{new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 dark:border-gray-800 flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessageText}
+                      onChange={(e) => setNewMessageText(e.target.value)}
+                      placeholder="Type your response..."
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                      data-testid="support-input-message"
+                    />
+                    <Button type="submit" disabled={sendingMessage} className="bg-blue-600 hover:bg-blue-700 text-white" data-testid="support-button-send">
+                      {sendingMessage ? "..." : "Reply"}
+                    </Button>
+                  </form>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-4 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">Select a ticket from the queue to respond</p>
                 </div>
               )}
             </div>

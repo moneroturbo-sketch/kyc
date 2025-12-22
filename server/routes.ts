@@ -18,8 +18,9 @@ import {
   notifyAccountFrozen,
   notifyAccountUnfrozen
 } from "./services/notifications";
-import { insertUserSchema, insertKycSchema, insertVendorProfileSchema, insertOfferSchema, insertOrderSchema, insertRatingSchema, insertExchangeSchema, disputes } from "@shared/schema";
+import { insertUserSchema, insertKycSchema, insertVendorProfileSchema, insertOfferSchema, insertOrderSchema, insertRatingSchema, insertExchangeSchema, disputes, supportTickets } from "@shared/schema";
 import { db } from "./db";
+import { desc } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -5737,10 +5738,20 @@ export async function registerRoutes(
     }
   });
 
-  // Get user's support tickets
+  // Get user's support tickets or all tickets if support staff
   app.get("/api/support/tickets", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const tickets = await storage.getSupportTicketsByUser(req.user!.userId);
+      const isSupport = req.user!.role === "admin" || req.user!.role === "support";
+      let tickets;
+      
+      if (isSupport) {
+        // Support staff see all tickets
+        tickets = await db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt));
+      } else {
+        // Regular users see only their tickets
+        tickets = await storage.getSupportTicketsByUser(req.user!.userId);
+      }
+      
       res.json(tickets);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
