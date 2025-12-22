@@ -23,6 +23,9 @@ import { db } from "./db";
 import { emailVerificationLimiter, passwordResetLimiter, emailResendLimiter } from "./middleware/emailRateLimiter";
 import { sendVerificationEmail, sendPasswordResetEmail, send2FAResetEmail } from "./services/email";
 import { validatePassword, generateVerificationCode } from "./utils/validation";
+import { emailVerificationLimiter, passwordResetLimiter, emailResendLimiter } from "./middleware/emailRateLimiter";
+import { sendVerificationEmail, sendPasswordResetEmail, send2FAResetEmail } from "./services/email";
+import { validatePassword, generateVerificationCode } from "./utils/validation";
 import { desc } from "drizzle-orm";
 
 export async function registerRoutes(
@@ -77,6 +80,14 @@ export async function registerRoutes(
         role: user.role,
       });
 
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await storage.createEmailVerificationCode({
+        userId: user.id,
+        code,
+        expiresAt,
+      });
+      await sendVerificationEmail(user.email, code);
       res.json({
         token,
         user: {
@@ -106,6 +117,9 @@ export async function registerRoutes(
       }
 
       if (!user.isActive) {
+      if (!user.emailVerified) {
+        return res.status(403).json({ message: "Email verification required. Check your inbox for the verification code." });
+      }
         return res.status(403).json({ message: "Account is not active" });
       }
 
@@ -5847,8 +5861,6 @@ export async function registerRoutes(
     }
   });
 
-  return httpServer;
-}
 
   // ==================== EMAIL VERIFICATION ROUTES ====================
   
@@ -6045,7 +6057,5 @@ export async function registerRoutes(
       res.status(500).json({ message: error.message });
     }
   });
-}
 
-// Fix: Remove duplicate closing brace
-// The function should close after the last route
+  return httpServer;

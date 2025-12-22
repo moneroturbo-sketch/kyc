@@ -1,4 +1,7 @@
-import { eq, and, desc, sql, gte, lte, or, like, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, or, like, isNull, gt } from "drizzle-orm";
+import { emailVerificationCodes, passwordResetCodes, twoFactorResetCodes, type InsertEmailVerificationCode, type EmailVerificationCode, type InsertPasswordResetCode, type PasswordResetCode, type InsertTwoFactorResetCode, type TwoFactorResetCode } from "@shared/schema";
+import { emailVerificationCodes, passwordResetCodes, twoFactorResetCodes, type InsertEmailVerificationCode, type EmailVerificationCode, type InsertPasswordResetCode, type PasswordResetCode, type InsertTwoFactorResetCode, type TwoFactorResetCode } from "@shared/schema";
+import { emailVerificationCodes, passwordResetCodes, twoFactorResetCodes, type InsertEmailVerificationCode, type EmailVerificationCode, type InsertPasswordResetCode, type PasswordResetCode, type InsertTwoFactorResetCode, type TwoFactorResetCode } from "@shared/schema";
 import { db } from "./db";
 import {
   users,
@@ -371,6 +374,20 @@ export interface IStorage {
   getSupportTicket(id: string): Promise<SupportTicket | undefined>;
   updateSupportTicket(id: string, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined>;
   
+  // Email Verification Codes
+  createEmailVerificationCode(code: InsertEmailVerificationCode): Promise<EmailVerificationCode>;
+  getEmailVerificationCode(userId: string): Promise<EmailVerificationCode | undefined>;
+  markEmailVerificationAsUsed(codeId: string): Promise<void>;
+
+  // Password Reset Codes
+  createPasswordResetCode(code: InsertPasswordResetCode): Promise<PasswordResetCode>;
+  getPasswordResetCode(userId: string): Promise<PasswordResetCode | undefined>;
+  markPasswordResetAsUsed(codeId: string): Promise<void>;
+
+  // 2FA Reset Codes
+  createTwoFactorResetCode(code: InsertTwoFactorResetCode): Promise<TwoFactorResetCode>;
+  getTwoFactorResetCode(userId: string): Promise<TwoFactorResetCode | undefined>;
+  markTwoFactorResetAsUsed(codeId: string): Promise<void>;
   // Support Messages
   createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage>;
   getSupportMessagesByTicket(ticketId: string): Promise<SupportMessage[]>;
@@ -1810,105 +1827,49 @@ export class DatabaseStorage implements IStorage {
 
   async getSupportMessagesByTicket(ticketId: string): Promise<SupportMessage[]> {
     return await db.select().from(supportMessages).where(eq(supportMessages.ticketId, ticketId)).orderBy(desc(supportMessages.createdAt));
-  }
-}
 
-export const storage = new DatabaseStorage();
-
-  // Email Verification Codes
+  // Email Verification
   async createEmailVerificationCode(code: InsertEmailVerificationCode): Promise<EmailVerificationCode> {
     const [result] = await db.insert(emailVerificationCodes).values(code).returning();
     return result;
   }
 
   async getEmailVerificationCode(userId: string): Promise<EmailVerificationCode | undefined> {
-    const [code] = await db
-      .select()
-      .from(emailVerificationCodes)
-      .where(
-        and(
-          eq(emailVerificationCodes.userId, userId),
-          gt(emailVerificationCodes.expiresAt, new Date()),
-          isNull(emailVerificationCodes.usedAt)
-        )
-      )
-      .orderBy(desc(emailVerificationCodes.createdAt));
+    const [code] = await db.select().from(emailVerificationCodes).where(and(eq(emailVerificationCodes.userId, userId), gt(emailVerificationCodes.expiresAt, new Date()), isNull(emailVerificationCodes.usedAt))).orderBy(desc(emailVerificationCodes.createdAt));
     return code;
   }
 
   async markEmailVerificationAsUsed(codeId: string): Promise<void> {
-    await db
-      .update(emailVerificationCodes)
-      .set({ usedAt: new Date() })
-      .where(eq(emailVerificationCodes.id, codeId));
+    await db.update(emailVerificationCodes).set({ usedAt: new Date() }).where(eq(emailVerificationCodes.id, codeId));
   }
 
-  // Password Reset Codes
+  // Password Reset
   async createPasswordResetCode(code: InsertPasswordResetCode): Promise<PasswordResetCode> {
     const [result] = await db.insert(passwordResetCodes).values(code).returning();
     return result;
   }
 
   async getPasswordResetCode(userId: string): Promise<PasswordResetCode | undefined> {
-    const [code] = await db
-      .select()
-      .from(passwordResetCodes)
-      .where(
-        and(
-          eq(passwordResetCodes.userId, userId),
-          gt(passwordResetCodes.expiresAt, new Date()),
-          isNull(passwordResetCodes.usedAt)
-        )
-      )
-      .orderBy(desc(passwordResetCodes.createdAt));
+    const [code] = await db.select().from(passwordResetCodes).where(and(eq(passwordResetCodes.userId, userId), gt(passwordResetCodes.expiresAt, new Date()), isNull(passwordResetCodes.usedAt))).orderBy(desc(passwordResetCodes.createdAt));
     return code;
   }
 
   async markPasswordResetAsUsed(codeId: string): Promise<void> {
-    await db
-      .update(passwordResetCodes)
-      .set({ usedAt: new Date() })
-      .where(eq(passwordResetCodes.id, codeId));
+    await db.update(passwordResetCodes).set({ usedAt: new Date() }).where(eq(passwordResetCodes.id, codeId));
   }
 
-  // 2FA Reset Codes
+  // 2FA Reset
   async createTwoFactorResetCode(code: InsertTwoFactorResetCode): Promise<TwoFactorResetCode> {
     const [result] = await db.insert(twoFactorResetCodes).values(code).returning();
     return result;
   }
 
   async getTwoFactorResetCode(userId: string): Promise<TwoFactorResetCode | undefined> {
-    const [code] = await db
-      .select()
-      .from(twoFactorResetCodes)
-      .where(
-        and(
-          eq(twoFactorResetCodes.userId, userId),
-          gt(twoFactorResetCodes.expiresAt, new Date()),
-          isNull(twoFactorResetCodes.usedAt)
-        )
-      )
-      .orderBy(desc(twoFactorResetCodes.createdAt));
+    const [code] = await db.select().from(twoFactorResetCodes).where(and(eq(twoFactorResetCodes.userId, userId), gt(twoFactorResetCodes.expiresAt, new Date()), isNull(twoFactorResetCodes.usedAt))).orderBy(desc(twoFactorResetCodes.createdAt));
     return code;
   }
 
   async markTwoFactorResetAsUsed(codeId: string): Promise<void> {
-    await db
-      .update(twoFactorResetCodes)
-      .set({ usedAt: new Date() })
-      .where(eq(twoFactorResetCodes.id, codeId));
+    await db.update(twoFactorResetCodes).set({ usedAt: new Date() }).where(eq(twoFactorResetCodes.id, codeId));
   }
 }
-  
-import { 
-  emailVerificationCodes, 
-  passwordResetCodes, 
-  twoFactorResetCodes,
-  type InsertEmailVerificationCode,
-  type EmailVerificationCode,
-  type InsertPasswordResetCode,
-  type PasswordResetCode,
-  type InsertTwoFactorResetCode,
-  type TwoFactorResetCode,
-} from "@shared/schema";
-import { gt, isNull } from "drizzle-orm";
