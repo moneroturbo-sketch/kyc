@@ -20,6 +20,9 @@ import {
 } from "./services/notifications";
 import { insertUserSchema, insertKycSchema, insertVendorProfileSchema, insertOfferSchema, insertOrderSchema, insertRatingSchema, insertExchangeSchema, disputes, supportTickets } from "@shared/schema";
 import { db } from "./db";
+import { emailVerificationLimiter, passwordResetLimiter, emailResendLimiter } from "./middleware/emailRateLimiter";
+import { sendVerificationEmail, sendPasswordResetEmail, send2FAResetEmail } from "./services/email";
+import { validatePassword, generateVerificationCode } from "./utils/validation";
 import { desc } from "drizzle-orm";
 
 export async function registerRoutes(
@@ -5846,3 +5849,203 @@ export async function registerRoutes(
 
   return httpServer;
 }
+
+  // ==================== EMAIL VERIFICATION ROUTES ====================
+  
+  app.post("/api/auth/verify-email", requireAuth, emailVerificationLimiter, async (req: AuthRequest, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ message: "Verification code is required" });
+      }
+
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "Email is already verified" });
+      }
+
+      const verificationCode = await storage.getEmailVerificationCode(user.id);
+      if (!verificationCode || verificationCode.code !== code) {
+        return res.status(400).json({ message: "Invalid or expired verification code" });
+      }
+
+      await storage.updateUser(user.id, { emailVerified: true });
+      await storage.markEmailVerificationAsUsed(verificationCode.id);
+
+      res.json({ message: "Email verified successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/resend-verification-code", requireAuth, emailResendLimiter, async (req: AuthRequest, res) => {
+    try {
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "Email is already verified" });
+      }
+
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await storage.createEmailVerificationCode({
+        userId: user.id,
+        code,
+        expiresAt,
+      });
+
+      const emailSent = await sendVerificationEmail(user.email, code);
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send email" });
+      }
+
+      res.json({ message: "Verification code sent to email" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/forgot-password", passwordResetLimiter, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(200).json({ message: "If email exists, reset code will be sent" });
+      }
+
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await storage.createPasswordResetCode({
+        userId: user.id,
+        code,
+        expiresAt,
+      });
+
+      const emailSent = await sendPasswordResetEmail(user.email, code);
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send email" });
+      }
+
+      res.json({ message: "If email exists, reset code will be sent" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/reset-password", passwordResetLimiter, async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ message: "Email, code, and new password are required" });
+      }
+
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.error });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const resetCode = await storage.getPasswordResetCode(user.id);
+      if (!resetCode || resetCode.code !== code) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashedPassword });
+      await storage.markPasswordResetAsUsed(resetCode.id);
+
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "password_reset",
+        resource: "users",
+        resourceId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/2fa/reset", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { code, newSecret, token } = req.body;
+
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.twoFactorEnabled) {
+        return res.status(400).json({ message: "2FA is not enabled" });
+      }
+
+      if (code) {
+        // Email-based reset
+        const resetCode = await storage.getTwoFactorResetCode(user.id);
+        if (!resetCode || resetCode.code !== code) {
+          return res.status(400).json({ message: "Invalid or expired reset code" });
+        }
+
+        // Generate new 2FA secret
+        const { secret, qrCode } = await generateTotpSecret(user.username);
+        const recoveryCodes = generateRecoveryCodes();
+
+        await storage.updateUser(user.id, {
+          twoFactorSecret: secret,
+          twoFactorRecoveryCodes: recoveryCodes,
+        });
+
+        await storage.markTwoFactorResetAsUsed(resetCode.id);
+
+        res.json({
+          message: "2FA reset successfully",
+          secret,
+          qrCode,
+          recoveryCodes,
+        });
+      } else if (token && newSecret) {
+        // App-based reset
+        const isValid = verifyTotp(token, user.twoFactorSecret!);
+        if (!isValid) {
+          return res.status(400).json({ message: "Invalid 2FA token" });
+        }
+
+        const recoveryCodes = generateRecoveryCodes();
+        await storage.updateUser(user.id, {
+          twoFactorSecret: newSecret,
+          twoFactorRecoveryCodes: recoveryCodes,
+        });
+
+        res.json({ message: "2FA reset successfully", recoveryCodes });
+      } else {
+        return res.status(400).json({ message: "Code or token is required" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+}
+
+// Fix: Remove duplicate closing brace
+// The function should close after the last route

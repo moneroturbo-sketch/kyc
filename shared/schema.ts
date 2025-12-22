@@ -856,109 +856,82 @@ export type DisputeChatMessage = typeof disputeChatMessages.$inferSelect;
 
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
-export type Wallet = typeof wallets.$inferSelect;
+// Fix: Remove duplicate type declarations, keep just the schema definitions and inferred types
 
-export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true });
-export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
-export type Transaction = typeof transactions.$inferSelect;
-
-export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true });
-export type InsertRating = z.infer<typeof insertRatingSchema>;
-export type Rating = typeof ratings.$inferSelect;
-
-export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
-export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-export type Notification = typeof notifications.$inferSelect;
-
-export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, createdAt: true });
-export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
-export type AuditLog = typeof auditLogs.$inferSelect;
-
-export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({ id: true, createdAt: true, updatedAt: true });
-export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
-export type SupportTicket = typeof supportTickets.$inferSelect;
-
-export const insertSupportMessageSchema = createInsertSchema(supportMessages).omit({ id: true, createdAt: true });
-export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;
-export type SupportMessage = typeof supportMessages.$inferSelect;
-
-export type MaintenanceSettings = typeof maintenanceSettings.$inferSelect;
-export type ThemeSettings = typeof themeSettings.$inferSelect;
 export type Exchange = typeof exchanges.$inferSelect;
-export type InsertExchange = z.infer<typeof createInsertSchema(exchanges).omit({ id: true, createdAt: true, updatedAt: true })>;
-
 export const insertExchangeSchema = createInsertSchema(exchanges).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertExchange = z.infer<typeof insertExchangeSchema>;
 
 export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
-export type InsertWithdrawalRequest = z.infer<typeof createInsertSchema(withdrawalRequests).omit({ id: true, createdAt: true })>;
 export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({ id: true, createdAt: true });
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
 
 export type SocialPost = typeof socialPosts.$inferSelect;
-export type InsertSocialPost = z.infer<typeof createInsertSchema(socialPosts).omit({ id: true, createdAt: true, updatedAt: true })>;
 export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
 
 export type SocialComment = typeof socialComments.$inferSelect;
-export type InsertSocialComment = z.infer<typeof createInsertSchema(socialComments).omit({ id: true, createdAt: true })>;
 export const insertSocialCommentSchema = createInsertSchema(socialComments).omit({ id: true, createdAt: true });
+export type InsertSocialComment = z.infer<typeof insertSocialCommentSchema>;
 
 export type SocialLike = typeof socialLikes.$inferSelect;
-export type InsertSocialLike = z.infer<typeof createInsertSchema(socialLikes).omit({ id: true, createdAt: true })>;
 export const insertSocialLikeSchema = createInsertSchema(socialLikes).omit({ id: true, createdAt: true });
+export type InsertSocialLike = z.infer<typeof insertSocialLikeSchema>;
 
 export type SocialDislike = typeof socialDislikes.$inferSelect;
-export type InsertSocialDislike = z.infer<typeof createInsertSchema(socialDislikes).omit({ id: true, createdAt: true })>;
 export const insertSocialDislikeSchema = createInsertSchema(socialDislikes).omit({ id: true, createdAt: true });
+export type InsertSocialDislike = z.infer<typeof insertSocialDislikeSchema>;
 
 export type SocialMute = typeof socialMutes.$inferSelect;
-export type InsertSocialMute = z.infer<typeof createInsertSchema(socialMutes).omit({ id: true, createdAt: true })>;
 export const insertSocialMuteSchema = createInsertSchema(socialMutes).omit({ id: true, createdAt: true });
+export type InsertSocialMute = z.infer<typeof insertSocialMuteSchema>;
 
 export type LoaderAd = typeof loaderAds.$inferSelect;
-export type InsertLoaderAd = z.infer<typeof createInsertSchema(loaderAds).omit({ id: true, createdAt: true })>;
 export const insertLoaderAdSchema = createInsertSchema(loaderAds).omit({ id: true, createdAt: true });
+export type InsertLoaderAd = z.infer<typeof insertLoaderAdSchema>;
 
 export type LoaderOrder = typeof loaderOrders.$inferSelect;
-export type InsertLoaderOrder = z.infer<typeof createInsertSchema(loaderOrders).omit({ id: true, createdAt: true })>;
 export const insertLoaderOrderSchema = createInsertSchema(loaderOrders).omit({ id: true, createdAt: true });
+export type InsertLoaderOrder = z.infer<typeof insertLoaderOrderSchema>;
 
 export type LoaderOrderMessage = typeof loaderOrderMessages.$inferSelect;
-export type InsertLoaderOrderMessage = z.infer<typeof createInsertSchema(loaderOrderMessages).omit({ id: true, createdAt: true })>;
 export const insertLoaderOrderMessageSchema = createInsertSchema(loaderOrderMessages).omit({ id: true, createdAt: true });
+export type InsertLoaderOrderMessage = z.infer<typeof insertLoaderOrderMessageSchema>;
 
 export type LoaderDispute = typeof loaderDisputes.$inferSelect;
-export type InsertLoaderDispute = z.infer<typeof createInsertSchema(loaderDisputes).omit({ id: true, createdAt: true })>;
 export const insertLoaderDisputeSchema = createInsertSchema(loaderDisputes).omit({ id: true, createdAt: true });
+export type InsertLoaderDispute = z.infer<typeof insertLoaderDisputeSchema>;
 
 export type LoaderFeedback = typeof loaderFeedback.$inferSelect;
-export type InsertLoaderFeedback = z.infer<typeof createInsertSchema(loaderFeedback).omit({ id: true, createdAt: true })>;
 export const insertLoaderFeedbackSchema = createInsertSchema(loaderFeedback).omit({ id: true, createdAt: true });
+export type InsertLoaderFeedback = z.infer<typeof insertLoaderFeedbackSchema>;
 
 export type LoaderStats = typeof loaderStats.$inferSelect;
-export type InsertLoaderStats = z.infer<typeof createInsertSchema(loaderStats).omit({ id: true, createdAt: true, updatedAt: true })>;
 export const insertLoaderStatsSchema = createInsertSchema(loaderStats).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertLoaderStats = z.infer<typeof insertLoaderStatsSchema>;
 
 export type UserDepositAddress = typeof userDepositAddresses.$inferSelect;
-export type InsertUserDepositAddress = z.infer<typeof createInsertSchema(userDepositAddresses).omit({ id: true, createdAt: true })>;
 export const insertUserDepositAddressSchema = createInsertSchema(userDepositAddresses).omit({ id: true, createdAt: true });
+export type InsertUserDepositAddress = z.infer<typeof insertUserDepositAddressSchema>;
 
 export type BlockchainDeposit = typeof blockchainDeposits.$inferSelect;
-export type InsertBlockchainDeposit = z.infer<typeof createInsertSchema(blockchainDeposits).omit({ id: true, createdAt: true })>;
 export const insertBlockchainDepositSchema = createInsertSchema(blockchainDeposits).omit({ id: true, createdAt: true });
+export type InsertBlockchainDeposit = z.infer<typeof insertBlockchainDepositSchema>;
 
 export type DepositSweep = typeof depositSweeps.$inferSelect;
-export type InsertDepositSweep = z.infer<typeof createInsertSchema(depositSweeps).omit({ id: true, createdAt: true })>;
 export const insertDepositSweepSchema = createInsertSchema(depositSweeps).omit({ id: true, createdAt: true });
+export type InsertDepositSweep = z.infer<typeof insertDepositSweepSchema>;
 
 export type PlatformWalletControls = typeof platformWalletControls.$inferSelect;
 
 export type BlockchainAdminAction = typeof blockchainAdminActions.$inferSelect;
-export type InsertBlockchainAdminAction = z.infer<typeof createInsertSchema(blockchainAdminActions).omit({ id: true, createdAt: true })>;
 export const insertBlockchainAdminActionSchema = createInsertSchema(blockchainAdminActions).omit({ id: true, createdAt: true });
+export type InsertBlockchainAdminAction = z.infer<typeof insertBlockchainAdminActionSchema>;
 
 export type UserWithdrawalLimit = typeof userWithdrawalLimits.$inferSelect;
-export type InsertUserWithdrawalLimit = z.infer<typeof createInsertSchema(userWithdrawalLimits).omit({ id: true, createdAt: true })>;
 export const insertUserWithdrawalLimitSchema = createInsertSchema(userWithdrawalLimits).omit({ id: true, createdAt: true });
+export type InsertUserWithdrawalLimit = z.infer<typeof insertUserWithdrawalLimitSchema>;
 
 export type UserFirstWithdrawal = typeof userFirstWithdrawals.$inferSelect;
-export type InsertUserFirstWithdrawal = z.infer<typeof createInsertSchema(userFirstWithdrawals).omit({ id: true, createdAt: true })>;
 export const insertUserFirstWithdrawalSchema = createInsertSchema(userFirstWithdrawals).omit({ id: true, createdAt: true });
+export type InsertUserFirstWithdrawal = z.infer<typeof insertUserFirstWithdrawalSchema>;
