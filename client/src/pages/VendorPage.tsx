@@ -281,7 +281,7 @@ export default function VendorPage() {
       <div className="space-y-4 sm:space-y-6 pb-20 px-2 sm:px-4">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">Post Ad</h1>
-          {isKycVerified && (
+          {(!shouldRequireKyc || isKycVerified) && (
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-primary hover:bg-primary/90" data-testid="button-create-offer">
