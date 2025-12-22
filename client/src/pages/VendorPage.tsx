@@ -132,6 +132,18 @@ export default function VendorPage() {
     return null;
   }
 
+  interface MaintenanceSettings {
+    kycRequired?: boolean;
+  }
+
+  const { data: maintenanceSettings } = useQuery<MaintenanceSettings>({
+    queryKey: ["maintenanceSettings"],
+    queryFn: async () => {
+      const res = await fetch("/api/maintenance/status");
+      return res.json();
+    },
+  });
+
   const { data: kycStatus, isLoading: kycLoading } = useQuery<KycStatus>({
     queryKey: ["kycStatus"],
     queryFn: async () => {
@@ -141,6 +153,7 @@ export default function VendorPage() {
   });
 
   const isKycVerified = kycStatus?.status === "approved";
+  const shouldRequireKyc = maintenanceSettings?.kycRequired === true;
 
   const { data: offers, isLoading: offersLoading } = useQuery<Offer[]>({
     queryKey: ["vendorOffers"],
@@ -401,7 +414,7 @@ export default function VendorPage() {
             <Skeleton className="h-24 bg-muted" />
             <Skeleton className="h-24 bg-muted" />
           </div>
-        ) : !isKycVerified ? (
+        ) : shouldRequireKyc && !isKycVerified ? (
           <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
               <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />

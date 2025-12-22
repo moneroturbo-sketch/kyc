@@ -2579,6 +2579,7 @@ export async function registerRoutes(
         withdrawalsEnabled: settings?.withdrawalsEnabled ?? true,
         tradingEnabled: settings?.tradingEnabled ?? true,
         loginEnabled: settings?.loginEnabled ?? true,
+        kycRequired: settings?.kycRequired ?? false,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
