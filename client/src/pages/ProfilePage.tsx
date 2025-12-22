@@ -208,9 +208,6 @@ export default function ProfilePage() {
                     <h2 className="text-2xl font-bold text-foreground truncate">
                       {userProfile.username}
                     </h2>
-                    {userProfile.isVerified && (
-                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    )}
                     {userProfile.hasVerifyBadge && (
                       <Badge className="bg-yellow-600 flex items-center gap-1 flex-shrink-0">
                         <Star className="h-3 w-3" />
@@ -220,21 +217,6 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {userProfile.tier && (
-                      <Badge variant="outline">{userProfile.tier}</Badge>
-                    )}
-                    {userProfile.role === "vendor" && (
-                      <Badge className="bg-purple-600">Vendor</Badge>
-                    )}
-                    {userProfile.role === "customer" && (
-                      <Badge className="bg-blue-600">Customer</Badge>
-                    )}
-                    {userProfile.hasVerifyBadge && (
-                      <Badge className="bg-yellow-600 flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Verified
-                      </Badge>
-                    )}
                   </div>
 
                   <p className="text-sm text-muted-foreground">

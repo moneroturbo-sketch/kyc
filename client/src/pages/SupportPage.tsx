@@ -644,7 +644,6 @@ export default function SupportPage() {
                       <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
                         <User className="h-5 w-5" />
                         KYC Application
-                        {kyc.isStarVerified && <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />}
                       </CardTitle>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500">{kyc.status}</Badge>

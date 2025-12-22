@@ -364,25 +364,6 @@ export default function SettingsPage() {
                           </div>
                         </div>
 
-                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                          <p className="text-yellow-600 dark:text-yellow-400 font-medium text-sm mb-2">{t('twoFactor.recoveryCodesSaved')}</p>
-                          <div className="grid grid-cols-2 gap-2 mb-3">
-                            {setup2FAMutation.data.recoveryCodes?.map((code: string, i: number) => (
-                              <code key={i} className="text-xs bg-muted p-1 rounded text-foreground">
-                                {code}
-                              </code>
-                            ))}
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyRecoveryCodes(setup2FAMutation.data.recoveryCodes)}
-                          >
-                            <Copy className="h-3 w-3 mr-2" />
-                            {t('twoFactor.copyAll')}
-                          </Button>
-                        </div>
-
                         <div className="space-y-2">
                           <Label className="text-foreground">{t('twoFactor.verificationCode')}</Label>
                           <Input
