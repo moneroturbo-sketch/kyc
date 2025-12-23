@@ -1,20 +1,21 @@
 import nodemailer from "nodemailer";
 
-const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
-const gmailSender = "kycmarketplace.noreply@gmail.com";
+const brevoPassword = process.env.BREVO_SMTP_PASSWORD;
+const brevoSender = "kycmarketplace.noreply@gmail.com";
 
-if (!gmailAppPassword) {
-  console.warn("⚠️  GMAIL_APP_PASSWORD not set - email sending will be disabled");
+if (!brevoPassword) {
+  console.warn("⚠️  BREVO_SMTP_PASSWORD not set - email sending will be disabled");
 } else {
-  console.log("✅ Gmail configured - email sending enabled");
+  console.log("✅ Brevo configured - email sending enabled");
 }
 
-const transporter = gmailAppPassword
+const transporter = brevoPassword
   ? nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp-relay.brevo.com",
+      port: 587,
       auth: {
-        user: gmailSender,
-        pass: gmailAppPassword,
+        user: brevoSender,
+        pass: brevoPassword,
       },
     })
   : null;
@@ -31,7 +32,7 @@ export async function sendVerificationEmail(
   try {
     console.log(`Sending verification email to ${email}...`);
     await transporter.sendMail({
-      from: gmailSender,
+      from: brevoSender,
       to: email,
       subject: "Verify Your Email Address - KYC Marketplace",
       html: `
@@ -65,7 +66,7 @@ export async function sendPasswordResetEmail(
 
   try {
     await transporter.sendMail({
-      from: gmailSender,
+      from: brevoSender,
       to: email,
       subject: "Reset Your Password - KYC Marketplace",
       html: `
@@ -98,7 +99,7 @@ export async function send2FAResetEmail(
 
   try {
     await transporter.sendMail({
-      from: gmailSender,
+      from: brevoSender,
       to: email,
       subject: "Reset Two-Factor Authentication - KYC Marketplace",
       html: `
