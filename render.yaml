@@ -24,6 +24,8 @@ services:
         sync: false
       - key: BREVO_SMTP_PASSWORD
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
       - key: BSC_RPC_URL
         value: https://bsc-dataseed1.bnbchain.org:443
       - key: BSCSCAN_API_KEY
