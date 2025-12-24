@@ -12,13 +12,18 @@ if (!brevoPassword) {
 const transporter = brevoPassword
   ? nodemailer.createTransport({
       host: "smtp-relay.brevo.com",
-      port: 587,
+      port: 465, // Use SSL port instead of TLS (587) for better reliability on Render
+      secure: true, // Use TLS
       auth: {
         user: "9e9469001@smtp-brevo.com",
         pass: brevoPassword,
       },
-      connectionTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: 15000, // Increased timeout for Render's network
+      socketTimeout: 15000,
+      pool: {
+        maxConnections: 1,
+        maxMessages: Infinity,
+      },
     })
   : null;
 
@@ -51,14 +56,14 @@ export async function sendVerificationEmail(
     });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Email send timeout after 15s")), 15000)
+      setTimeout(() => reject(new Error("Email send timeout after 20s")), 20000)
     );
 
     await Promise.race([promise, timeoutPromise]);
     console.log(`✅ Verification email sent to ${email}`);
     return true;
   } catch (error: any) {
-    console.error(`❌ Email sending failed for ${email}:`, error.message);
+    console.error(`❌ Email sending failed for ${email}:`, error.message || error);
     return false;
   }
 }
@@ -90,8 +95,8 @@ export async function sendPasswordResetEmail(
       `,
     });
     return true;
-  } catch (error) {
-    console.error("Email sending failed:", error);
+  } catch (error: any) {
+    console.error("Email sending failed:", error.message || error);
     return false;
   }
 }
@@ -109,22 +114,22 @@ export async function send2FAResetEmail(
     await transporter.sendMail({
       from: brevoSender,
       to: email,
-      subject: "Reset Two-Factor Authentication - KYC Marketplace",
+      subject: "2FA Reset - KYC Marketplace",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Two-Factor Authentication Reset</h2>
+          <h2>2FA Reset Request</h2>
           <p>Your 2FA reset code is:</p>
           <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 20px 0;">
             ${code}
           </div>
           <p>This code will expire in 10 minutes.</p>
-          <p>If you did not request this action, please ignore this email.</p>
+          <p>If you did not request a 2FA reset, please ignore this email.</p>
         </div>
       `,
     });
     return true;
-  } catch (error) {
-    console.error("Email sending failed:", error);
+  } catch (error: any) {
+    console.error("2FA email sending failed:", error.message || error);
     return false;
   }
 }
