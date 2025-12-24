@@ -223,7 +223,7 @@ export async function send2FAResetEmail(
     } catch (error: any) {
       console.error("SMTP 2FA reset failed:", error.message);
       return await sendViaBrevoAPI(email, "2FA Reset - KYC Marketplace", htmlContent);
-    });
+    }
   }
 
   if (brevoApiKey) {
