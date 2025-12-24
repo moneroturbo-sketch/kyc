@@ -22,5 +22,23 @@ console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT || '3000');
 console.log('============================\n');
 
-// Now start the actual app
-require('./dist/index.cjs');
+// Run database migrations before starting the app
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
+
+(async () => {
+  try {
+    console.log('🔄 Running database migrations...');
+    const { stdout, stderr } = await execPromise('npx drizzle-kit push');
+    if (stdout) console.log(stdout);
+    if (stderr) console.error(stderr);
+    console.log('✅ Migrations completed successfully\n');
+  } catch (error) {
+    console.warn('⚠️ Migration warning:', error.message);
+    console.warn('Continuing with app startup...\n');
+  }
+
+  // Now start the actual app
+  require('./dist/index.cjs');
+})();
