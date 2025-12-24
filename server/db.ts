@@ -4,9 +4,9 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Enhanced database URL validation and debugging with SSL support
-function getDatabaseUrl(): string {
-  const dbUrl = process.env.DATABASE_URL;
+// Enhanced database URL validation with SSL support for Render
+function getDatabaseConfig() {
+  let dbUrl = process.env.DATABASE_URL;
   
   if (!dbUrl) {
     console.error("❌ CRITICAL ERROR: DATABASE_URL not set!");
@@ -27,24 +27,32 @@ function getDatabaseUrl(): string {
     console.log("✅ Connecting to database at:", match[1]);
   }
   
-  return dbUrl;
-}
-
-const connectionString = getDatabaseUrl();
-
-// Create Pool with SSL required for Render PostgreSQL
-const poolConfig: any = { 
-  connectionString 
-};
-
-// Enable SSL for production (Render requires this)
-if (process.env.NODE_ENV === "production" || process.env.DATABASE_URL) {
-  poolConfig.ssl = {
-    rejectUnauthorized: false // Required for Render's managed PostgreSQL
+  // Add SSL parameters to URL for Render PostgreSQL
+  // Render requires ?sslmode=require for secure connections
+  if (!dbUrl.includes("sslmode")) {
+    if (dbUrl.includes("?")) {
+      dbUrl += "&sslmode=require";
+    } else {
+      dbUrl += "?sslmode=require";
+    }
+    console.log("🔒 Added sslmode=require to connection string");
+  }
+  
+  // Create pool config with both URL params AND pool-level SSL
+  const poolConfig: any = { 
+    connectionString: dbUrl
   };
+  
+  // Also set SSL at pool level for redundancy
+  poolConfig.ssl = {
+    rejectUnauthorized: false
+  };
+  
+  console.log("✅ SSL/TLS: ENABLED for Render PostgreSQL");
+  
+  return poolConfig;
 }
 
-console.log("🔒 SSL/TLS:", process.env.NODE_ENV === "production" ? "ENABLED (required for Render)" : "DISABLED (dev mode)");
-
+const poolConfig = getDatabaseConfig();
 export const pool = new Pool(poolConfig);
 export const db = drizzle(pool, { schema });

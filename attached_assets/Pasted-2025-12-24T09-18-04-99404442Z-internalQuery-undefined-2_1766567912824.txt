@@ -1,0 +1,50 @@
+2025-12-24T09:18:04.99404442Z   internalQuery: undefined,
+2025-12-24T09:18:04.99404642Z   where: undefined,
+2025-12-24T09:18:04.99404845Z   schema: undefined,
+2025-12-24T09:18:04.99405039Z   table: undefined,
+2025-12-24T09:18:04.994052341Z   column: undefined,
+2025-12-24T09:18:04.994054401Z   dataType: undefined,
+2025-12-24T09:18:04.994056421Z   constraint: undefined,
+2025-12-24T09:18:04.994058441Z   file: undefined,
+2025-12-24T09:18:04.994060541Z   line: undefined,
+2025-12-24T09:18:04.994062741Z   routine: undefined
+2025-12-24T09:18:04.994064911Z }
+2025-12-24T09:18:04.994186114Z node:internal/process/promises:394
+2025-12-24T09:18:04.994191885Z     triggerUncaughtException(err, true /* fromPromise */);
+2025-12-24T09:18:04.994194294Z     ^
+2025-12-24T09:18:04.994196415Z 
+2025-12-24T09:18:04.994200015Z error: SSL/TLS required
+2025-12-24T09:18:04.994202295Z     at /opt/render/project/src/dist/index.cjs:70:13330
+2025-12-24T09:18:04.994206185Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-12-24T09:18:04.994209165Z     at async ele (/opt/render/project/src/dist/index.cjs:153:118131)
+2025-12-24T09:18:04.994211455Z     at async tF (/opt/render/project/src/dist/index.cjs:673:11387)
+2025-12-24T09:18:04.994213545Z     at async /opt/render/project/src/dist/index.cjs:673:18391 {
+2025-12-24T09:18:04.994215755Z   length: 37,
+2025-12-24T09:18:04.994217985Z   severity: 'FATAL',
+2025-12-24T09:18:04.994220045Z   code: '28000',
+2025-12-24T09:18:04.994222145Z   detail: undefined,
+2025-12-24T09:18:04.994224355Z   hint: undefined,
+2025-12-24T09:18:04.994226495Z   position: undefined,
+2025-12-24T09:18:04.994230026Z   internalPosition: undefined,
+2025-12-24T09:18:04.994232136Z   internalQuery: undefined,
+2025-12-24T09:18:04.994234236Z   where: undefined,
+2025-12-24T09:18:04.994236256Z   schema: undefined,
+2025-12-24T09:18:04.994238186Z   table: undefined,
+2025-12-24T09:18:04.994240196Z   column: undefined,
+2025-12-24T09:18:04.994242596Z   dataType: undefined,
+2025-12-24T09:18:04.994244576Z   constraint: undefined,
+2025-12-24T09:18:04.994259276Z   file: undefined,
+2025-12-24T09:18:04.994261736Z   line: undefined,
+2025-12-24T09:18:04.994263876Z   routine: undefined
+2025-12-24T09:18:04.994265947Z }
+2025-12-24T09:18:04.994267867Z 
+2025-12-24T09:18:04.994270007Z Node.js v22.16.0
+2025-12-24T09:18:10.092175949Z ==> Exited with status 1
+2025-12-24T09:18:10.117307097Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-12-24T09:18:15.24856721Z ==> Running 'npm run start'
+2025-12-24T09:18:16.243295667Z 
+2025-12-24T09:18:16.243323728Z > rest-express@1.0.0 start
+2025-12-24T09:18:16.243328848Z > NODE_ENV=production node dist/index.cjs
+2025-12-24T09:18:16.243331298Z 
+2025-12-24T09:18:17.338716592Z ✅ Connecting to database at: dpg-d55q2hemcj7s73fgaetg-a.virginia-postgres.render.com
+2025-12-24T09:18:17.742545456Z ✅ Brevo configured - email sending enabled
