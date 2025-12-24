@@ -17,6 +17,8 @@ const transporter = brevoPassword
         user: "9e9469001@smtp-brevo.com",
         pass: brevoPassword,
       },
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
     })
   : null;
 
@@ -31,7 +33,7 @@ export async function sendVerificationEmail(
 
   try {
     console.log(`Sending verification email to ${email}...`);
-    await transporter.sendMail({
+    const promise = transporter.sendMail({
       from: brevoSender,
       to: email,
       subject: "Verify Your Email Address - KYC Marketplace",
@@ -47,6 +49,12 @@ export async function sendVerificationEmail(
         </div>
       `,
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Email send timeout after 15s")), 15000)
+    );
+
+    await Promise.race([promise, timeoutPromise]);
     console.log(`✅ Verification email sent to ${email}`);
     return true;
   } catch (error: any) {
