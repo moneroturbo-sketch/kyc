@@ -1,0 +1,50 @@
+2025-12-24T08:51:49.151358017Z     at /opt/render/project/src/dist/index.cjs:70:13330
+2025-12-24T08:51:49.151362537Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-12-24T08:51:49.151367047Z     at async Jce (/opt/render/project/src/dist/index.cjs:153:118131)
+2025-12-24T08:51:49.151370648Z     at async tF (/opt/render/project/src/dist/index.cjs:673:11387)
+2025-12-24T08:51:49.151374388Z     at async /opt/render/project/src/dist/index.cjs:673:18391 {
+2025-12-24T08:51:49.151377918Z   errno: -3008,
+2025-12-24T08:51:49.151382118Z   code: 'ENOTFOUND',
+2025-12-24T08:51:49.151386219Z   syscall: 'getaddrinfo',
+2025-12-24T08:51:49.151390659Z   hostname: 'dpg-d55q2hemcj7s73fgaetg-a'
+2025-12-24T08:51:49.151395039Z }
+2025-12-24T08:51:49.151398999Z 
+2025-12-24T08:51:49.151402579Z Node.js v22.16.0
+2025-12-24T08:51:56.920423231Z ==> Exited with status 1
+2025-12-24T08:51:56.93614131Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-12-24T08:52:03.060899224Z ==> Running 'npm run start'
+2025-12-24T08:52:04.076618352Z 
+2025-12-24T08:52:04.076646624Z > rest-express@1.0.0 start
+2025-12-24T08:52:04.076653134Z > NODE_ENV=production node dist/index.cjs
+2025-12-24T08:52:04.076655624Z 
+2025-12-24T08:52:05.67255815Z ✅ Brevo configured - email sending enabled
+2025-12-24T08:52:06.663674555Z Sweep destination configured: 0xdb0bca3231368b452b3bba9b1ac8921207f14a74
+2025-12-24T08:52:06.666211229Z Initializing database...
+2025-12-24T08:52:06.765051888Z Database initialization failed: Error: getaddrinfo ENOTFOUND dpg-d55q2hemcj7s73fgaetg-a
+2025-12-24T08:52:06.76508389Z     at /opt/render/project/src/dist/index.cjs:70:13330
+2025-12-24T08:52:06.76508693Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-12-24T08:52:06.76508985Z     at async Jce (/opt/render/project/src/dist/index.cjs:153:118131)
+2025-12-24T08:52:06.76509214Z     at async tF (/opt/render/project/src/dist/index.cjs:673:11387)
+2025-12-24T08:52:06.765094351Z     at async /opt/render/project/src/dist/index.cjs:673:18391 {
+2025-12-24T08:52:06.76509666Z   errno: -3008,
+2025-12-24T08:52:06.765099511Z   code: 'ENOTFOUND',
+2025-12-24T08:52:06.765102741Z   syscall: 'getaddrinfo',
+2025-12-24T08:52:06.765122862Z   hostname: 'dpg-d55q2hemcj7s73fgaetg-a'
+2025-12-24T08:52:06.765127592Z }
+2025-12-24T08:52:06.765264609Z node:internal/process/promises:394
+2025-12-24T08:52:06.765268909Z     triggerUncaughtException(err, true /* fromPromise */);
+2025-12-24T08:52:06.765271139Z     ^
+2025-12-24T08:52:06.765273209Z 
+2025-12-24T08:52:06.765275409Z Error: getaddrinfo ENOTFOUND dpg-d55q2hemcj7s73fgaetg-a
+2025-12-24T08:52:06.76527806Z     at /opt/render/project/src/dist/index.cjs:70:13330
+2025-12-24T08:52:06.765281069Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-12-24T08:52:06.76528404Z     at async Jce (/opt/render/project/src/dist/index.cjs:153:118131)
+2025-12-24T08:52:06.7652863Z     at async tF (/opt/render/project/src/dist/index.cjs:673:11387)
+2025-12-24T08:52:06.76528849Z     at async /opt/render/project/src/dist/index.cjs:673:18391 {
+2025-12-24T08:52:06.76529065Z   errno: -3008,
+2025-12-24T08:52:06.76529333Z   code: 'ENOTFOUND',
+2025-12-24T08:52:06.76529614Z   syscall: 'getaddrinfo',
+2025-12-24T08:52:06.765347233Z   hostname: 'dpg-d55q2hemcj7s73fgaetg-a'
+2025-12-24T08:52:06.765350173Z }
+2025-12-24T08:52:06.765352253Z 
+2025-12-24T08:52:06.765354603Z Node.js v22.16.0
