@@ -12,14 +12,14 @@ if (!brevoPassword) {
 const transporter = brevoPassword
   ? nodemailer.createTransport({
       host: "smtp-relay.brevo.com",
-      port: 465, // Use SSL port instead of TLS (587) for better reliability on Render
-      secure: true, // Use TLS
+      port: 587, // STARTTLS port (correct for Brevo)
+      secure: false, // Use STARTTLS, not implicit SSL
       auth: {
         user: "9e9469001@smtp-brevo.com",
         pass: brevoPassword,
       },
-      connectionTimeout: 15000, // Increased timeout for Render's network
-      socketTimeout: 15000,
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
       pool: {
         maxConnections: 1,
         maxMessages: Infinity,
