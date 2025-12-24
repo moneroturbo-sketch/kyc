@@ -1550,7 +1550,8 @@ export class DatabaseStorage implements IStorage {
   async getAllActiveDepositAddresses(): Promise<UserDepositAddress[]> {
     return await db
       .select()
-      .from(userDepositAddresses);
+      .from(userDepositAddresses)
+      .where(eq(userDepositAddresses.isActive, true));
   }
 
   // Blockchain Wallet - Deposits
