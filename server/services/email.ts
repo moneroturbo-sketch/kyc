@@ -3,6 +3,11 @@ import nodemailer from "nodemailer";
 const brevoPassword = process.env.BREVO_SMTP_PASSWORD;
 const brevoSender = "kycmarketplace.noreply@gmail.com";
 
+console.log("🔍 [STARTUP] Email Service Diagnostics:");
+console.log(`   BREVO_SMTP_PASSWORD set: ${brevoPassword ? "YES" : "NO"}`);
+console.log(`   Password length: ${brevoPassword ? brevoPassword.length : 0}`);
+console.log(`   Sender email: ${brevoSender}`);
+
 if (!brevoPassword) {
   console.warn("⚠️  BREVO_SMTP_PASSWORD not set - email sending will be disabled");
 } else {
@@ -18,8 +23,8 @@ const transporter = brevoPassword
         user: "9e9469001@smtp-brevo.com",
         pass: brevoPassword,
       },
-      connectionTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: 15000,
+      socketTimeout: 15000,
       pool: {
         maxConnections: 1,
         maxMessages: Infinity,
@@ -32,12 +37,14 @@ export async function sendVerificationEmail(
   code: string
 ): Promise<boolean> {
   if (!transporter) {
-    console.warn("Email service not configured. Code:", code);
+    console.warn("⚠️ Email service not configured. Code:", code);
     return false;
   }
 
   try {
-    console.log(`Sending verification email to ${email}...`);
+    console.log(`📧 Sending verification email to ${email}...`);
+    console.log(`[DEBUG] Using Brevo SMTP: host=smtp-relay.brevo.com, port=587, user=9e9469001@smtp-brevo.com`);
+    
     const promise = transporter.sendMail({
       from: brevoSender,
       to: email,
@@ -60,10 +67,14 @@ export async function sendVerificationEmail(
     );
 
     await Promise.race([promise, timeoutPromise]);
-    console.log(`✅ Verification email sent to ${email}`);
+    console.log(`✅ Verification email sent successfully to ${email}`);
     return true;
   } catch (error: any) {
-    console.error(`❌ Email sending failed for ${email}:`, error.message || error);
+    console.error(`❌ Email sending failed for ${email}`);
+    console.error(`   Error message: ${error.message || error}`);
+    console.error(`   Error code: ${error.code || 'N/A'}`);
+    console.error(`   Error response: ${error.response || 'N/A'}`);
+    console.error(`   Full error:`, error);
     return false;
   }
 }
