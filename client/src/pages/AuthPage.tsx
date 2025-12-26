@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Mail, Lock, User } from "lucide-react";
 
@@ -19,6 +20,12 @@ export default function AuthPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [registrationStep, setRegistrationStep] = useState<"email" | "verify" | "create">("email");
   const [requires2FA, setRequires2FA] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<"email" | "reset">("email");
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async (data: typeof loginForm) => {
@@ -86,6 +93,54 @@ export default function AuthPage() {
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Registration Failed", description: error.message });
+    },
+  });
+
+  const requestPasswordResetMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      return json;
+    },
+    onSuccess: () => {
+      toast({ title: "Check Email", description: "Password reset code sent to your email" });
+      setForgotPasswordStep("reset");
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Failed", description: error.message });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async () => {
+      if (newPassword !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: resetCode, newPassword }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      return json;
+    },
+    onSuccess: () => {
+      toast({ title: "Success!", description: "Password reset successfully. You can now login." });
+      setForgotPasswordOpen(false);
+      setForgotPasswordStep("email");
+      setForgotPasswordEmail("");
+      setResetCode("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Failed", description: error.message });
     },
   });
 
@@ -173,6 +228,96 @@ export default function AuthPage() {
                   >
                     {loginMutation.isPending ? "Signing in..." : "Sign In"}
                   </Button>
+                  <div className="text-center">
+                    <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="link" className="text-sm p-0" data-testid="button-forgot-password">
+                          Forgot Password?
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-foreground">Reset Password</DialogTitle>
+                        </DialogHeader>
+                        {forgotPasswordStep === "email" ? (
+                          <div className="space-y-4 pt-4">
+                            <p className="text-sm text-muted-foreground">
+                              Enter your email address and we'll send you a code to reset your password.
+                            </p>
+                            <div className="space-y-2">
+                              <Label htmlFor="forgot-email" className="text-foreground">Email Address</Label>
+                              <Input
+                                id="forgot-email"
+                                type="email"
+                                placeholder="Enter your email"
+                                className="bg-muted border-border"
+                                value={forgotPasswordEmail}
+                                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                                data-testid="input-forgot-password-email"
+                              />
+                            </div>
+                            <Button
+                              className="w-full"
+                              onClick={() => requestPasswordResetMutation.mutate(forgotPasswordEmail)}
+                              disabled={!forgotPasswordEmail || requestPasswordResetMutation.isPending}
+                              data-testid="button-send-reset-code"
+                            >
+                              {requestPasswordResetMutation.isPending ? "Sending..." : "Send Reset Code"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-4 pt-4">
+                            <p className="text-sm text-muted-foreground">
+                              Enter the reset code from your email and your new password.
+                            </p>
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-code" className="text-foreground">Reset Code</Label>
+                              <Input
+                                id="reset-code"
+                                placeholder="Enter reset code"
+                                className="bg-muted border-border"
+                                value={resetCode}
+                                onChange={(e) => setResetCode(e.target.value)}
+                                data-testid="input-reset-code"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="new-pwd" className="text-foreground">New Password</Label>
+                              <Input
+                                id="new-pwd"
+                                type="password"
+                                placeholder="Enter new password"
+                                className="bg-muted border-border"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                data-testid="input-reset-new-password"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="confirm-pwd" className="text-foreground">Confirm Password</Label>
+                              <Input
+                                id="confirm-pwd"
+                                type="password"
+                                placeholder="Confirm new password"
+                                className="bg-muted border-border"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                data-testid="input-reset-confirm-password"
+                              />
+                            </div>
+                            <Button
+                              className="w-full bg-green-600 hover:bg-green-700"
+                              onClick={() => resetPasswordMutation.mutate()}
+                              disabled={!resetCode || !newPassword || !confirmPassword || resetPasswordMutation.isPending}
+                              data-testid="button-confirm-reset-password"
+                            >
+                              {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+                            </Button>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </form>
               </TabsContent>
 
