@@ -173,9 +173,23 @@ export async function registerRoutes(
   // Login
   app.post("/api/auth/login", loginLimiter, requireLoginEnabled, async (req, res) => {
     try {
-      const { username, password, twoFactorToken, emailVerificationCode } = req.body;
+      const { username, email, password, twoFactorToken, emailVerificationCode } = req.body;
 
-      const user = await storage.getUserByUsername(username);
+      // Accept either username or email for login
+      const loginIdentifier = username || email;
+      if (!loginIdentifier) {
+        return res.status(400).json({ message: "Username or email is required" });
+      }
+
+      let user;
+      if (email && email.includes("@")) {
+        // Login with email
+        user = await storage.getUserByEmail(email);
+      } else {
+        // Login with username
+        user = await storage.getUserByUsername(loginIdentifier);
+      }
+
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
