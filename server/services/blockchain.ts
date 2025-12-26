@@ -190,6 +190,11 @@ export async function getCurrentBlockNumber(): Promise<number> {
   }
 }
 
+// If BSCScan starts failing we temporarily disable use of the API to avoid
+// repeated failing calls and noisy logs. This will be re-enabled after the
+// configured cooldown (default 10 minutes).
+let bscScanDisabledUntil = 0;
+
 const MIN_BNB_FOR_GAS = "0.0005";
 const GAS_FUNDING_AMOUNT = "0.001";
 
@@ -341,10 +346,14 @@ async function monitorViaBscScanApi(
   const response = await fetch(url);
   const data = await response.json();
   
+  // Log full response on unexpected status for debugging
   if (data.status !== "1" || !Array.isArray(data.result)) {
+    // Common non-success responses include: { status: '0', message: 'NOTOK' } or rate-limit/error messages
+    console.error("[DepositScanner][BSCScan] unexpected response:", data);
     if (data.message === "No transactions found") {
       return [];
     }
+    // Surface the API message for higher-level handling
     throw new Error(data.message || "BSCScan API error");
   }
 
@@ -368,10 +377,14 @@ export async function monitorDepositAddress(
   blockNumber: number;
 }>> {
   const bscScanKey = process.env.BSCSCAN_API_KEY;
-  const useBscScan = bscScanKey && bscScanKey.length > 10;
-  
+  const useBscScan = bscScanKey && bscScanKey.length > 10 && Date.now() > bscScanDisabledUntil;
+
   console.log(`[DepositScanner] Checking address ${address.slice(0, 10)}... using BSCScan: ${useBscScan}`);
-  
+
+  if (bscScanKey && bscScanKey.length > 10 && Date.now() <= bscScanDisabledUntil) {
+    console.warn(`[DepositScanner] Skipping BSCScan API until ${new Date(bscScanDisabledUntil).toISOString()} due to recent failures`);
+  }
+
   if (useBscScan) {
     try {
       console.log("[DepositScanner] Using BSCScan API for deposit detection");
@@ -380,6 +393,10 @@ export async function monitorDepositAddress(
       return result;
     } catch (error: any) {
       console.error("[DepositScanner] BSCScan API failed, falling back to RPC:", error?.message || error);
+      // Temporarily disable BSCScan usage for a cooldown period to avoid repeated failures
+      const cooldownMs = parseInt(process.env.BSCSCAN_COOLDOWN_MINUTES || "10", 10) * 60 * 1000;
+      bscScanDisabledUntil = Date.now() + cooldownMs;
+      console.log(`[DepositScanner] Disabling BSCScan API usage for ${cooldownMs / 1000}s until ${new Date(bscScanDisabledUntil).toISOString()}`);
     }
   }
 

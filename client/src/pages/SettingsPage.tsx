@@ -37,6 +37,12 @@ export default function SettingsPage() {
   const user = getUser();
   const [setup2FAOpen, setSetup2FAOpen] = useState(false);
   const [verifyToken, setVerifyToken] = useState("");
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [reset2FAOpen, setReset2FAOpen] = useState(false);
+  const [disable2FAToken, setDisable2FAToken] = useState("");
   const [kycDialogOpen, setKycDialogOpen] = useState(false);
   const [idType, setIdType] = useState("passport");
   const [idNumber, setIdNumber] = useState("");
@@ -128,6 +134,52 @@ export default function SettingsPage() {
     },
     onError: () => {
       toast({ variant: "destructive", title: "Invalid code" });
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async () => {
+      if (newPassword !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+      const res = await fetchWithAuth("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setChangePasswordOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast({ title: "Success", description: "Password changed successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const request2FAResetMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetchWithAuth("/api/auth/request-2fa-reset", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Email Sent", description: "Check your email for the 2FA reset code" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
     },
   });
 
@@ -397,6 +449,177 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Password Management Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Password Management
+            </CardTitle>
+            <CardDescription>
+              Change your password and secure your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
+              <DialogTrigger asChild>
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-foreground font-medium">Change Password</p>
+                    <p className="text-muted-foreground text-sm">Update your account password regularly for security</p>
+                  </div>
+                  <Button className="bg-primary hover:bg-primary/90" data-testid="button-change-password">
+                    Change Password
+                  </Button>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-foreground">Change Password</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password" className="text-foreground">Current Password</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      placeholder="Enter current password"
+                      className="bg-muted border-border"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      data-testid="input-current-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password" className="text-foreground">New Password</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="Enter new password"
+                      className="bg-muted border-border"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      data-testid="input-new-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-foreground">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm new password"
+                      className="bg-muted border-border"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      data-testid="input-confirm-password"
+                    />
+                  </div>
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={!currentPassword || !newPassword || !confirmPassword || changePasswordMutation.isPending}
+                    onClick={() => changePasswordMutation.mutate()}
+                    data-testid="button-confirm-password-change"
+                  >
+                    {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+
+        {/* 2FA Reset Card */}
+        {me?.twoFactorEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              2FA Management
+            </CardTitle>
+            <CardDescription>
+              Reset or disable your two-factor authentication
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div>
+                <p className="text-foreground font-medium">Reset Authenticator</p>
+                <p className="text-muted-foreground text-sm">Request a code via email to reset your 2FA authenticator</p>
+              </div>
+              <Dialog open={reset2FAOpen} onOpenChange={setReset2FAOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-orange-600 hover:bg-orange-700" data-testid="button-reset-2fa">
+                    Reset 2FA
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground">Reset 2FA Authenticator</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      A reset code will be sent to your email address. Use it to set up a new authenticator.
+                    </p>
+                    <Button
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      disabled={request2FAResetMutation.isPending}
+                      onClick={() => request2FAResetMutation.mutate()}
+                      data-testid="button-request-2fa-reset"
+                    >
+                      {request2FAResetMutation.isPending ? "Sending..." : "Send Reset Code"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div>
+                <p className="text-foreground font-medium">Disable 2FA</p>
+                <p className="text-muted-foreground text-sm">Temporarily disable two-factor authentication</p>
+              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500/10" data-testid="button-disable-2fa">
+                    Disable 2FA
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground">Disable 2FA</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Enter your authenticator code to disable two-factor authentication.
+                    </p>
+                    <Input
+                      type="text"
+                      placeholder="000000"
+                      maxLength={6}
+                      className="bg-muted border-border text-center text-lg tracking-widest"
+                      value={disable2FAToken}
+                      onChange={(e) => setDisable2FAToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      data-testid="input-disable-2fa-code"
+                    />
+                    <Button
+                      className="w-full bg-red-600 hover:bg-red-700"
+                      disabled={disable2FAToken.length !== 6 || disable2FAMutation.isPending}
+                      onClick={() => {
+                        disable2FAMutation.mutate(disable2FAToken);
+                        setDisable2FAToken("");
+                      }}
+                      data-testid="button-confirm-disable-2fa"
+                    >
+                      {disable2FAMutation.isPending ? "Disabling..." : "Disable 2FA"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+        )}
 
         {user?.role !== "admin" && user?.role !== "dispute_admin" && (
         <Card>

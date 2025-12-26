@@ -383,6 +383,191 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== PASSWORD RESET ROUTES ====================
+
+  // Request password reset
+  app.post("/api/auth/request-password-reset", passwordResetLimiter, async (req: AuthRequest, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // For security, don't reveal if email exists
+        return res.json({ message: "If an account exists, you will receive a password reset email" });
+      }
+
+      const resetCode = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await storage.createPasswordResetCode({
+        userId: user.id,
+        code: resetCode,
+        expiresAt,
+      });
+
+      const emailSent = await sendPasswordResetEmail(email, resetCode);
+
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "password_reset_requested",
+        resource: "users",
+        resourceId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ 
+        message: "If an account exists, you will receive a password reset email",
+        success: emailSent 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Reset password with code
+  app.post("/api/auth/reset-password", async (req: AuthRequest, res) => {
+    try {
+      const { code, newPassword } = req.body;
+      
+      if (!code || !newPassword) {
+        return res.status(400).json({ message: "Code and new password are required" });
+      }
+
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.error });
+      }
+
+      // Find the reset code
+      const resetCodesTable = await storage.db.query.passwordResetCodes;
+      let resetCode: any;
+      
+      // We need to check the database directly for valid codes
+      try {
+        const result = await storage.db.execute(
+          sql`SELECT * FROM password_reset_codes WHERE code = ${code} AND used_at IS NULL AND expires_at > now()`
+        );
+        resetCode = result[0];
+      } catch {
+        resetCode = null;
+      }
+
+      if (!resetCode) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      const user = await storage.getUser(resetCode.user_id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashedPassword });
+      await storage.markPasswordResetAsUsed(resetCode.id);
+
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "password_reset",
+        resource: "users",
+        resourceId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Change password (authenticated user)
+  app.post("/api/auth/change-password", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new password are required" });
+      }
+
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const isValidPassword = await comparePassword(currentPassword, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.error });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashedPassword });
+
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "password_changed",
+        resource: "users",
+        resourceId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Request 2FA reset (sends email with code)
+  app.post("/api/auth/request-2fa-reset", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.twoFactorEnabled) {
+        return res.status(400).json({ message: "2FA is not enabled" });
+      }
+
+      const resetCode = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await storage.createTwoFactorResetCode({
+        userId: user.id,
+        code: resetCode,
+        expiresAt,
+      });
+
+      const emailSent = await send2FAResetEmail(user.email, resetCode);
+
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "2fa_reset_requested",
+        resource: "users",
+        resourceId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      res.json({ 
+        message: "2FA reset code sent to your email",
+        success: emailSent 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== KYC ROUTES ====================
   
   // Submit KYC
