@@ -173,7 +173,7 @@ export async function registerRoutes(
   // Login
   app.post("/api/auth/login", loginLimiter, requireLoginEnabled, async (req, res) => {
     try {
-      const { username, password, twoFactorToken } = req.body;
+      const { username, password, twoFactorToken, emailVerificationCode } = req.body;
 
       const user = await storage.getUserByUsername(username);
       if (!user) {
@@ -203,23 +203,50 @@ export async function registerRoutes(
       }
 
       if (user.twoFactorEnabled) {
-        if (!twoFactorToken) {
+        if (!twoFactorToken && !emailVerificationCode) {
+          // Send email code as fallback for lost authenticator
+          const emailCode = generateVerificationCode();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+          
+          await storage.createTwoFactorResetCode({
+            userId: user.id,
+            code: emailCode,
+            expiresAt,
+          });
+
+          const emailSent = await send2FAResetEmail(user.email, emailCode);
+
           return res.status(200).json({ 
             requiresTwoFactor: true,
-            message: "2FA token required" 
+            canUseEmailCode: true,
+            message: "2FA required. If you lost your authenticator, use the code sent to your email." 
           });
         }
 
-        const isValidTotp = verifyTotp(twoFactorToken, user.twoFactorSecret!);
-        const isRecoveryCode = user.twoFactorRecoveryCodes?.includes(twoFactorToken);
+        // Check authenticator code first
+        if (twoFactorToken) {
+          const isValidTotp = verifyTotp(twoFactorToken, user.twoFactorSecret!);
+          const isRecoveryCode = user.twoFactorRecoveryCodes?.includes(twoFactorToken);
 
-        if (!isValidTotp && !isRecoveryCode) {
-          return res.status(401).json({ message: "Invalid 2FA token" });
-        }
-
-        if (isRecoveryCode) {
-          const updatedCodes = user.twoFactorRecoveryCodes!.filter(code => code !== twoFactorToken);
-          await storage.updateUser(user.id, { twoFactorRecoveryCodes: updatedCodes });
+          if (isValidTotp || isRecoveryCode) {
+            if (isRecoveryCode) {
+              const updatedCodes = user.twoFactorRecoveryCodes!.filter(code => code !== twoFactorToken);
+              await storage.updateUser(user.id, { twoFactorRecoveryCodes: updatedCodes });
+            }
+            // Valid 2FA - proceed to login
+          } else {
+            return res.status(401).json({ message: "Invalid 2FA token" });
+          }
+        } else if (emailVerificationCode) {
+          // Use email code as fallback
+          const resetCode = await storage.getTwoFactorResetCode(user.id);
+          if (!resetCode || resetCode.code !== emailVerificationCode) {
+            return res.status(401).json({ message: "Invalid or expired email code" });
+          }
+          await storage.markTwoFactorResetAsUsed(resetCode.id);
+          // Valid email code - proceed to login
+        } else {
+          return res.status(401).json({ message: "2FA code required" });
         }
       }
 
@@ -443,25 +470,13 @@ export async function registerRoutes(
         return res.status(400).json({ message: passwordValidation.error });
       }
 
-      // Find the reset code
-      const resetCodesTable = await storage.db.query.passwordResetCodes;
-      let resetCode: any;
-      
-      // We need to check the database directly for valid codes
-      try {
-        const result = await storage.db.execute(
-          sql`SELECT * FROM password_reset_codes WHERE code = ${code} AND used_at IS NULL AND expires_at > now()`
-        );
-        resetCode = result[0];
-      } catch {
-        resetCode = null;
-      }
-
+      // Find the reset code by code value
+      const resetCode = await storage.getPasswordResetCodeByCode(code);
       if (!resetCode) {
         return res.status(400).json({ message: "Invalid or expired reset code" });
       }
 
-      const user = await storage.getUser(resetCode.user_id);
+      const user = await storage.getUser(resetCode.userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }

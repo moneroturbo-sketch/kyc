@@ -1840,6 +1840,11 @@ export class DatabaseStorage implements IStorage {
     return code;
   }
 
+  async getPasswordResetCodeByCode(code: string): Promise<PasswordResetCode | undefined> {
+    const [result] = await db.select().from(passwordResetCodes).where(and(eq(passwordResetCodes.code, code), gt(passwordResetCodes.expiresAt, new Date()), isNull(passwordResetCodes.usedAt))).orderBy(desc(passwordResetCodes.createdAt));
+    return result;
+  }
+
   async markPasswordResetAsUsed(codeId: string): Promise<void> {
     await db.update(passwordResetCodes).set({ usedAt: new Date() }).where(eq(passwordResetCodes.id, codeId));
   }

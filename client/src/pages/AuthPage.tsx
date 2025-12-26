@@ -20,6 +20,9 @@ export default function AuthPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [registrationStep, setRegistrationStep] = useState<"email" | "verify" | "create">("email");
   const [requires2FA, setRequires2FA] = useState(false);
+  const [canUseEmailCode, setCanUseEmailCode] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
+  const [useEmailCodeMode, setUseEmailCodeMode] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<"email" | "reset">("email");
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
@@ -28,7 +31,7 @@ export default function AuthPage() {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
   const loginMutation = useMutation({
-    mutationFn: async (data: typeof loginForm) => {
+    mutationFn: async (data: any) => {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,7 +44,13 @@ export default function AuthPage() {
     onSuccess: (data) => {
       if (data.requiresTwoFactor) {
         setRequires2FA(true);
-        toast({ title: "2FA Required", description: "Please enter your authenticator code" });
+        setCanUseEmailCode(data.canUseEmailCode || false);
+        toast({ 
+          title: "2FA Required", 
+          description: data.canUseEmailCode 
+            ? "Use authenticator code or email code if you lost your device"
+            : "Please enter your authenticator code" 
+        });
         return;
       }
       localStorage.setItem("token", data.token);
@@ -173,7 +182,12 @@ export default function AuthPage() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    loginMutation.mutate(loginForm);
+                    const data = { ...loginForm };
+                    if (useEmailCodeMode && emailCode) {
+                      data.emailVerificationCode = emailCode;
+                      data.twoFactorToken = "";
+                    }
+                    loginMutation.mutate(data);
                   }}
                   className="space-y-4"
                 >
@@ -207,17 +221,63 @@ export default function AuthPage() {
                     </div>
                   </div>
                   {requires2FA && (
-                    <div className="space-y-2">
-                      <Label htmlFor="2fa-token" className="text-foreground">2FA Code</Label>
-                      <Input
-                        id="2fa-token"
-                        data-testid="input-2fa-token"
-                        placeholder="Enter 6-digit code"
-                        className="bg-muted border-border text-foreground text-center text-lg tracking-widest"
-                        maxLength={6}
-                        value={loginForm.twoFactorToken}
-                        onChange={(e) => setLoginForm({ ...loginForm, twoFactorToken: e.target.value })}
-                      />
+                    <div className="space-y-3">
+                      {!useEmailCodeMode ? (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="2fa-token" className="text-foreground">Authenticator Code</Label>
+                            <Input
+                              id="2fa-token"
+                              data-testid="input-2fa-token"
+                              placeholder="Enter 6-digit code"
+                              className="bg-muted border-border text-foreground text-center text-lg tracking-widest"
+                              maxLength={6}
+                              value={loginForm.twoFactorToken}
+                              onChange={(e) => setLoginForm({ ...loginForm, twoFactorToken: e.target.value })}
+                            />
+                          </div>
+                          {canUseEmailCode && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full text-sm"
+                              onClick={() => {
+                                setUseEmailCodeMode(true);
+                                setLoginForm({ ...loginForm, twoFactorToken: "" });
+                              }}
+                              data-testid="button-use-email-code"
+                            >
+                              Lost your authenticator? Use email code instead
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="email-code" className="text-foreground">Email Code</Label>
+                            <Input
+                              id="email-code"
+                              data-testid="input-email-code"
+                              placeholder="Enter code from email"
+                              className="bg-muted border-border text-foreground"
+                              value={emailCode}
+                              onChange={(e) => setEmailCode(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full text-sm"
+                            onClick={() => {
+                              setUseEmailCodeMode(false);
+                              setEmailCode("");
+                            }}
+                            data-testid="button-back-to-authenticator"
+                          >
+                            Back to authenticator code
+                          </Button>
+                        </>
+                      )}
                     </div>
                   )}
                   <Button
