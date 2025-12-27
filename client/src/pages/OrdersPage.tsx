@@ -75,13 +75,13 @@ export default function OrdersPage() {
       case "awaiting_deposit":
         return <Badge className="bg-yellow-600">Awaiting Deposit</Badge>;
       case "escrowed":
-        return <Badge className="bg-purple-600">Funds Escrowed</Badge>;
+        return <Badge className="bg-purple-600 dark:bg-purple-700">Funds Escrowed</Badge>;
       case "created":
         return <Badge className="bg-blue-600">Pending Payment</Badge>;
       case "paid":
         return <Badge className="bg-yellow-600">Awaiting Confirmation</Badge>;
       case "confirmed":
-        return <Badge className="bg-purple-600">Confirmed</Badge>;
+        return <Badge className="bg-purple-600 dark:bg-purple-700">Confirmed</Badge>;
       case "completed":
         return <Badge className="bg-green-600">Completed</Badge>;
       case "cancelled":
@@ -98,7 +98,7 @@ export default function OrdersPage() {
       case "awaiting_deposit":
         return <Clock className="h-5 w-5 text-yellow-400" />;
       case "escrowed":
-        return <Clock className="h-5 w-5 text-purple-400" />;
+        return <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />;
       case "created":
         return <Clock className="h-5 w-5 text-blue-400" />;
       case "paid":
@@ -120,7 +120,7 @@ export default function OrdersPage() {
       awaiting_liability_confirmation: { label: "Select Terms", className: "bg-yellow-600" },
       awaiting_payment_details: { label: "Awaiting Details", className: "bg-yellow-600" },
       payment_details_sent: { label: "Details Sent", className: "bg-blue-600" },
-      payment_sent: { label: "Payment Sent", className: "bg-purple-600" },
+      payment_sent: { label: "Payment Sent", className: "bg-purple-600 dark:bg-purple-700" },
       completed: { label: "Completed", className: "bg-green-600" },
       cancelled_auto: { label: "Auto-Cancelled", className: "bg-gray-600" },
       cancelled_loader: { label: "Cancelled", className: "bg-red-600" },

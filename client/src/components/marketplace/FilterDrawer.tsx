@@ -83,8 +83,8 @@ export function FilterDrawer({ filters, onChange, onReset }: FilterDrawerProps) 
         >
           <Filter className="h-4 w-4 mr-2" />
           Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-600 rounded-full">
+            {activeFilterCount > 0 && (
+            <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-600 dark:bg-purple-700 rounded-full">
               {activeFilterCount}
             </span>
           )}
@@ -106,8 +106,8 @@ export function FilterDrawer({ filters, onChange, onReset }: FilterDrawerProps) 
                   size="sm"
                   className={
                     localFilters.type === type
-                      ? "bg-purple-600"
-                      : "bg-gray-800 border-gray-700"
+                        ? "bg-purple-600 dark:bg-purple-700"
+                          : "bg-gray-800 border-gray-700"
                   }
                   onClick={() =>
                     setLocalFilters({ ...localFilters, type })
@@ -201,7 +201,7 @@ export function FilterDrawer({ filters, onChange, onReset }: FilterDrawerProps) 
           </Button>
           <Button
             onClick={handleApply}
-            className="flex-1 bg-purple-600 hover:bg-purple-700"
+            className="flex-1 bg-purple-600 dark:bg-purple-700 hover:bg-purple-700 dark:hover:bg-purple-800"
             data-testid="button-apply-filters"
           >
             Apply Filters

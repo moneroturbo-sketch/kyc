@@ -92,7 +92,7 @@ export function NotificationBell() {
         <div className="p-3 border-b border-gray-800 flex items-center justify-between">
           <h3 className="font-medium text-white">Notifications</h3>
           {unreadCount && unreadCount.count > 0 && (
-            <span className="text-xs text-purple-400">
+            <span className="text-xs text-purple-400 dark:text-purple-300">
               {unreadCount.count} unread
             </span>
           )}
@@ -104,7 +104,7 @@ export function NotificationBell() {
                 <div
                   key={notif.id}
                   className={`p-3 hover:bg-gray-800/50 cursor-pointer ${
-                    !notif.isRead ? "bg-purple-900/10" : ""
+                    !notif.isRead ? "bg-purple-900/10 dark:bg-purple-900/20" : ""
                   }`}
                   data-testid={`notification-${notif.id}`}
                 >
@@ -122,7 +122,7 @@ export function NotificationBell() {
                       </p>
                     </div>
                     {!notif.isRead && (
-                      <div className="w-2 h-2 rounded-full bg-purple-500 mt-1" />
+                      <div className="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400 mt-1" />
                     )}
                   </div>
                 </div>
@@ -138,7 +138,7 @@ export function NotificationBell() {
         <div className="p-2 border-t border-gray-800">
           <Button
             variant="ghost"
-            className="w-full text-purple-400 hover:text-purple-300"
+            className="w-full text-purple-400 dark:text-purple-300 hover:text-purple-300 dark:hover:text-purple-200"
             onClick={() => {
               setOpen(false);
               setLocation("/notifications");

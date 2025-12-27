@@ -615,7 +615,7 @@ export default function VendorPage() {
                 <Label>Active (visible in marketplace)</Label>
               </div>
               <Button
-                className="w-full bg-purple-600 hover:bg-purple-700"
+                className="w-full bg-purple-600 dark:bg-purple-700 hover:bg-purple-700 dark:hover:bg-purple-800"
                 onClick={() => editingOffer && updateOfferMutation.mutate({ offerId: editingOffer.id, updates: editOffer })}
                 disabled={updateOfferMutation.isPending}
                 data-testid="button-update-offer"

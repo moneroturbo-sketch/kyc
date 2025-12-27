@@ -19,19 +19,19 @@ export function VendorCard({ vendor, onClick }: VendorCardProps) {
   const tierColors: Record<string, string> = {
     free: "bg-gray-600",
     basic: "bg-blue-600",
-    pro: "bg-purple-600",
+    pro: "bg-purple-600 dark:bg-purple-700",
     featured: "bg-yellow-600",
   };
 
   return (
     <Card
-      className="bg-gray-800/50 border-gray-700 hover:border-purple-600 transition-colors cursor-pointer"
+      className="bg-gray-800/50 border-gray-700 hover:border-purple-600 dark:hover:border-purple-700 transition-colors cursor-pointer"
       onClick={onClick}
       data-testid={`vendor-card-${vendor.id}`}
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 dark:from-purple-600 dark:to-blue-500 flex items-center justify-center">
             <span className="text-white font-bold text-lg">
               {vendor.username.charAt(0).toUpperCase()}
             </span>
@@ -140,7 +140,7 @@ export function CurrencySelector({
           onClick={() => onChange(currency)}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
             value === currency
-              ? "bg-purple-600 text-white"
+              ? "bg-purple-600 dark:bg-purple-700 text-white"
               : "bg-gray-800 text-gray-400 hover:bg-gray-700"
           }`}
           data-testid={`currency-${currency}`}
@@ -179,11 +179,11 @@ export function PaymentMethodChips({
         <Badge
           key={method}
           variant={selected.includes(method) ? "default" : "outline"}
-          className={`${
+            className={`${
             selectable ? "cursor-pointer" : ""
           } ${
             selected.includes(method)
-              ? "bg-purple-600 border-purple-600"
+              ? "bg-purple-600 dark:bg-purple-700 border-purple-600 dark:border-purple-700"
               : "text-gray-400 border-gray-600"
           }`}
           onClick={() => toggleMethod(method)}

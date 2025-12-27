@@ -299,9 +299,9 @@ export default function FinancePage() {
           <Card className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 border-purple-700">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <User className="h-10 w-10 text-purple-400" />
+                <User className="h-10 w-10 text-purple-400 dark:text-purple-300" />
                 <div>
-                  <p className="text-purple-300 text-sm">Total Users</p>
+                  <p className="text-purple-300 dark:text-purple-300 text-sm">Total Users</p>
                   <p className="text-2xl font-bold text-white" data-testid="total-users">{stats?.totalUsers || 0}</p>
                 </div>
               </div>

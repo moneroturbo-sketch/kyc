@@ -190,7 +190,7 @@ export default function ProfilePage() {
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 {/* Avatar */}
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 dark:from-purple-600 dark:to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                   {userProfile.profilePicture ? (
                     <img
                       src={userProfile.profilePicture}

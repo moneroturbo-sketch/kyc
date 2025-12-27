@@ -430,12 +430,12 @@ export default function OrderDetailPage() {
             Order #{order.id.slice(0, 8)}
           </h1>
           <Badge className={
-            order.status === "completed" ? "bg-green-600" :
-            order.status === "disputed" ? "bg-orange-600" :
-            order.status === "cancelled" ? "bg-red-600" :
-            order.status === "awaiting_deposit" ? "bg-yellow-600" :
-            order.status === "escrowed" ? "bg-purple-600" :
-            "bg-blue-600"
+            order.status === "completed" ? "bg-green-600 dark:bg-green-600" :
+            order.status === "disputed" ? "bg-orange-600 dark:bg-orange-600" :
+            order.status === "cancelled" ? "bg-red-600 dark:bg-red-600" :
+            order.status === "awaiting_deposit" ? "bg-yellow-600 dark:bg-yellow-600" :
+            order.status === "escrowed" ? "bg-purple-600 dark:bg-purple-700" :
+            "bg-blue-600 dark:bg-blue-700"
           }>
             {order.status === "awaiting_deposit" ? "Awaiting Deposit" :
              order.status === "escrowed" ? "Funds Escrowed" :
@@ -445,8 +445,8 @@ export default function OrderDetailPage() {
 
         <Card className="bg-gray-900/50 border-gray-800">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Shield className="h-5 w-5 text-purple-400" />
+            <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               Order Progress
             </CardTitle>
           </CardHeader>
@@ -457,10 +457,10 @@ export default function OrderDetailPage() {
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center ${
                       index < currentStep
-                        ? "bg-green-600"
+                        ? "bg-green-600 dark:bg-green-600"
                         : index === currentStep
-                        ? "bg-purple-600"
-                        : "bg-gray-700"
+                        ? "bg-purple-600 dark:bg-purple-700"
+                        : "bg-gray-300 dark:bg-gray-700"
                     }`}
                   >
                     <step.icon className="h-6 w-6 text-white" />
@@ -672,15 +672,15 @@ export default function OrderDetailPage() {
                     ) : (
                       <div className="flex flex-col max-w-[75%]">
                         {msg.senderId !== user?.id && (
-                          <span className="text-xs text-purple-400 mb-1 ml-1 font-medium">
+                          <span className="text-xs text-purple-600 dark:text-purple-400 mb-1 ml-1 font-medium">
                             {isBuyer ? "Seller" : "Buyer"}
                           </span>
                         )}
                         <div
                           className={`p-3 rounded-xl ${
                             msg.senderId === user?.id
-                              ? "bg-purple-600 text-white rounded-br-sm"
-                              : "bg-gray-700 text-white rounded-bl-sm"
+                              ? "bg-purple-600 dark:bg-purple-700 text-white dark:text-white rounded-br-sm"
+                              : "bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm"
                           }`}
                         >
                           {msg.fileUrl && (

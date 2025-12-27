@@ -257,7 +257,7 @@ export default function WalletPage() {
       case "processing":
       case "sent":
         return (
-          <Badge className="bg-purple-600">
+          <Badge className="bg-purple-600 dark:bg-purple-700">
             <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Processing
           </Badge>
         );

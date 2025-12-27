@@ -99,12 +99,12 @@ export function ChatWindow({
                   <div
                     className={`max-w-[70%] rounded-xl p-3 ${
                       msg.senderId === currentUserId
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-800 text-gray-200"
+                        ? "bg-purple-600 dark:bg-purple-700 text-white"
+                          : "bg-gray-800 text-gray-200"
                     }`}
                   >
                     {msg.senderId !== currentUserId && (
-                      <p className="text-xs font-medium mb-1 text-purple-400">
+                      <p className="text-xs font-medium mb-1 text-purple-400 dark:text-purple-300">
                         {msg.senderUsername}
                       </p>
                     )}
@@ -112,8 +112,8 @@ export function ChatWindow({
                     <p
                       className={`text-xs mt-1 ${
                         msg.senderId === currentUserId
-                          ? "text-purple-200"
-                          : "text-gray-500"
+                          ? "text-purple-200 dark:text-purple-200"
+                            : "text-gray-500"
                       }`}
                     >
                       {formatTime(msg.createdAt)}
@@ -170,7 +170,7 @@ export function ChatWindow({
           <Button
             onClick={handleSend}
             disabled={!newMessage.trim() || disabled}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 dark:bg-purple-700 hover:bg-purple-700 dark:hover:bg-purple-800"
             data-testid="button-send-message"
           >
             <Send className="h-4 w-4" />

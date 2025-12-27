@@ -583,9 +583,9 @@ export default function SupportPage() {
           <Card className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 border-purple-700">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <Store className="h-10 w-10 text-purple-400" />
+                <Store className="h-10 w-10 text-purple-400 dark:text-purple-300" />
                 <div>
-                  <p className="text-purple-300 text-sm">Pending Vendors</p>
+                  <p className="text-purple-300 dark:text-purple-300 text-sm">Pending Vendors</p>
                   <p className="text-3xl font-bold text-white" data-testid="pending-vendors-count">{pendingVendors?.length || 0}</p>
                 </div>
               </div>

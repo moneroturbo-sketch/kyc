@@ -390,7 +390,7 @@ export default function LoadersZone() {
                         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                         data-testid={`profile-link-loader-${ad.loaderId}`}
                       >
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 dark:from-purple-600 dark:to-blue-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                           {(ad.loaderUsername || "L")[0].toUpperCase()}
                         </div>
                         <div>
